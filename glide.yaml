@@ -1,0 +1,8 @@
+package: github.com/nmaupu/freenas-provisioner
+import:
+- package: github.com/Sirupsen/logrus
+  version: ^1.0.3
+- package: github.com/spf13/viper
+  version: ^1.0.0
+- package: github.com/dghubble/sling
+  version: ^1.1.0
