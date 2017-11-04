@@ -8,6 +8,7 @@ import (
 
 var (
 	logger = logrus.New()
+	isInit = false
 )
 
 func initLogger() {
@@ -21,6 +22,9 @@ func initLogger() {
 }
 
 func GetLogger() *logrus.Logger {
-	initLogger()
+	if !isInit {
+		initLogger()
+		isInit = true
+	}
 	return logger
 }
