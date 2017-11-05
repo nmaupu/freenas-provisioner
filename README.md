@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/nmaupu/freenas-provisioner.svg?branch=master)](https://travis-ci.org/nmaupu/freenas-provisioner)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nmaupu/freenas-provisioner)](https://goreportcard.com/report/github.com/nmaupu/freenas-provisioner)
+
 # What is freenas-provisioner
 
 Freenas-provisioner is a Kubernetes external provisioner.
