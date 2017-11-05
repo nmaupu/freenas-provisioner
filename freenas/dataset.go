@@ -3,8 +3,9 @@ package freenas
 import (
 	"errors"
 	"fmt"
-	"github.com/nmaupu/freenas-provisioner/logging"
+	"github.com/golang/glog"
 	"io/ioutil"
+	"path/filepath"
 )
 
 var (
@@ -18,6 +19,10 @@ type Dataset struct {
 	Pool       string `json:"pool"`
 	Refer      int64  `json:"refer,omitempty"`
 	Used       int64  `json:"used,omitempty"`
+}
+
+func (d *Dataset) String() string {
+	return filepath.Join(d.Pool, d.Name)
 }
 
 func (d *Dataset) CopyFrom(source FreenasResource) error {
@@ -40,7 +45,7 @@ func (d *Dataset) Get(server *FreenasServer) error {
 	var datasets []Dataset
 	resp, err := server.getSlingConnection().Get(endpoint).ReceiveSuccess(&datasets)
 	if err != nil {
-		logging.GetLogger().Warnln(err)
+		glog.Warningln(err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -61,7 +66,7 @@ func (d *Dataset) Create(server *FreenasServer) error {
 
 	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(d).Receive(nil, nil)
 	if err != nil {
-		logging.GetLogger().Warnln(err)
+		glog.Warningln(err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -78,7 +83,7 @@ func (d *Dataset) Delete(server *FreenasServer) error {
 	endpoint := fmt.Sprintf("/api/v1.0/storage/volume/%s/datasets/%s/", d.Pool, d.Name)
 	resp, err := server.getSlingConnection().Delete(endpoint).Receive(nil, nil)
 	if err != nil {
-		logging.GetLogger().Warnln(err)
+		glog.Warningln(err)
 		return err
 	}
 	defer resp.Body.Close()

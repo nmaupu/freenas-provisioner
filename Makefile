@@ -4,7 +4,7 @@ IMAGE_NAME=freenas-provisioner
 IMAGE_VERSION=0.7
 REMOTE_NAME=$(DOCKER_ID_USER)/$(IMAGE_NAME)
 
-all: $(BIN)/freenas-provisioner
+all: build
 
 fmt:
 	go fmt ./...
@@ -21,11 +21,11 @@ push: tag
 vendor:
 	glide install -v
 
-$(BIN)/freenas-provisioner: vendor $(BIN) $(shell find . -name "*.go")
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner .
+$(BIN)/freenas-provisioner build: vendor $(BIN) $(shell find . -name "*.go")
+	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner .
 
-install:
-	env CGO_ENABLED=0 go install
+darwin: vendor $(BIN) $(shell find . -name "*.go")
+	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner-darwin .
 
 clean:
 	go clean -i
@@ -40,4 +40,4 @@ ifndef DOCKER_ID_USER
 	$(error ERROR! DOCKER_ID_USER environment variable must be defined)
 endif
 
-.PHONY: fmt install clean test all image
+.PHONY: all fmt clean image tag push

@@ -1,5 +1,5 @@
-hash: 16075f61f44747fccf0c0230b3cc832c0e7928ff6216a9d3cd26d50fc73012d8
-updated: 2017-11-05T00:29:50.706769615+01:00
+hash: f59b89c87f2728def42cb80af39ba485db3c5653d5ea4b03ff21a769b9e7e90a
+updated: 2017-11-05T17:20:42.829567586+01:00
 imports:
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
@@ -57,6 +57,8 @@ imports:
   - json/parser
   - json/scanner
   - json/token
+- name: github.com/jawher/mow.cli
+  version: 0e80ee9f63156ea1954dc2375c33a1c7e752c25c
 - name: github.com/juju/ratelimit
   version: 77ed1c8a01217656d2080ad51981f6e99adaa177
 - name: github.com/kr/fs
@@ -119,6 +121,8 @@ imports:
 - name: golang.org/x/net
   version: e90d6d0afc4c315a0d87a568ae68577cc15149a0
   subpackages:
+  - context
+  - context/ctxhttp
   - http2
   - http2/hpack
   - idna

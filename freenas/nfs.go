@@ -3,7 +3,7 @@ package freenas
 import (
 	"errors"
 	"fmt"
-	"github.com/nmaupu/freenas-provisioner/logging"
+	"github.com/golang/glog"
 	"io/ioutil"
 )
 
@@ -51,7 +51,7 @@ func (n *NfsShare) Get(server *FreenasServer) error {
 	var shares []NfsShare
 	resp, err := server.getSlingConnection().Get(endpoint).ReceiveSuccess(&shares)
 	if err != nil {
-		logging.GetLogger().Warnln(err)
+		glog.Warningln(err)
 		return nil
 	}
 	defer resp.Body.Close()
@@ -81,7 +81,7 @@ func (n *NfsShare) Create(server *FreenasServer) error {
 	endpoint := "/api/v1.0/sharing/nfs/"
 	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(n).Receive(nil, nil)
 	if err != nil {
-		logging.GetLogger().Warnln(err)
+		glog.Warningln(err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -98,7 +98,7 @@ func (n *NfsShare) Delete(server *FreenasServer) error {
 	endpoint := fmt.Sprintf("/api/v1.0/sharing/nfs/%d/", n.Id)
 	_, err := server.getSlingConnection().Delete(endpoint).Receive(nil, nil)
 	if err != nil {
-		logging.GetLogger().Warnln(err)
+		glog.Warningln(err)
 	}
 	return err
 }

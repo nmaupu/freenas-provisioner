@@ -2,6 +2,7 @@ package freenas
 
 import (
 	"crypto/tls"
+	"fmt"
 	"github.com/dghubble/sling"
 	"net/http"
 )
@@ -20,7 +21,7 @@ type FreenasServer struct {
 	url                      string
 }
 
-func NewFreenasServer(host, port, username, password string, insecure bool) *FreenasServer {
+func NewFreenasServer(host string, port int, username, password string, insecure bool) *FreenasServer {
 	u := fmt.Sprintf("https://%s:%d", host, port)
 	return &FreenasServer{
 		Host:               host,
