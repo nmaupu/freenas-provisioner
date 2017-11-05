@@ -1,0 +1,23 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: freenas-provisioner
+  namespace: kube-system
+spec:
+  containers:
+    - name: freenas-provisioner
+      image: docker.io/nmaupu/freenas-provisioner:0.7
+      imagePullPolicy: Always
+      env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: FREENAS_HOST
+          value: 192.168.12.8
+        - name: FREENAS_PORT
+          value: 443
+        - name: FREENAS_USER
+          value: root
+        - name: FREENAS_PASSWORD
+          value: mypass

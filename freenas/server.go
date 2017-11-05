@@ -14,16 +14,21 @@ type FreenasResource interface {
 }
 
 type FreenasServer struct {
-	Url, Username, Password string
-	InsecureSkipVerify      bool
+	Host, Username, Password string
+	Port                     int
+	InsecureSkipVerify       bool
+	url                      string
 }
 
-func NewFreenasServer(url, username, password string, insecure bool) *FreenasServer {
+func NewFreenasServer(host, port, username, password string, insecure bool) *FreenasServer {
+	u := fmt.Sprintf("https://%s:%d", host, port)
 	return &FreenasServer{
-		Url:                url,
+		Host:               host,
+		Port:               port,
 		Username:           username,
 		Password:           password,
 		InsecureSkipVerify: insecure,
+		url:                u,
 	}
 }
 
@@ -32,5 +37,5 @@ func (s *FreenasServer) getSlingConnection() *sling.Sling {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: s.InsecureSkipVerify},
 	}
 	httpClient := &http.Client{Transport: tr}
-	return sling.New().Client(httpClient).Base(s.Url).SetBasicAuth(s.Username, s.Password)
+	return sling.New().Client(httpClient).Base(s.url).SetBasicAuth(s.Username, s.Password)
 }

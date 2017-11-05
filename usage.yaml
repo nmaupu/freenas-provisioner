@@ -1,0 +1,40 @@
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+  name: freenas-test-sc
+provisioner: maupu.org/freenas
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: freenas-test-pvc
+spec:
+  storageClassName: freenas-test-sc
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: freenas-test-pod
+spec:
+  containers:
+  - name: freenas-test-pod
+    image: gcr.io/google_containers/busybox:1.24
+    command:
+      - "/bin/sh"
+    args:
+      - "-c"
+      - "date >> /mnt/file.log && exit 0 || exit 1"
+    volumeMounts:
+      - name: freenas-test-volume
+        mountPath: "/mnt"
+  restartPolicy: "Never"
+  volumes:
+    - name: freenas-test-volume
+      persistentVolumeClaim:
+        claimName: freenas-test-pvc
