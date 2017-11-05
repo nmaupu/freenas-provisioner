@@ -1,0 +1,31 @@
+language: go
+go:
+- '1.8'
+sudo: false
+
+before_install:
+- go get -v github.com/Masterminds/glide
+- cd $GOPATH/src/github.com/Masterminds/glide && git checkout e73500c735917e39a8b782e0632418ab70250341 && go install && cd -
+
+install:
+  make vendor
+
+script:
+- make build
+- make darwin
+
+before_deploy:
+- mkdir -p bin_release
+- CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 go build -a -ldflags '-extldflags "-static" -X main.AppVersion=$TRAVIS_TAG' -o bin_release/freenas-provisioner_linux-amd64
+- CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static" -X main.AppVersion=$TRAVIS_TAG' -o bin_release/freenas-provisioner_darwin-amd64
+
+deploy:
+  provider: releases
+  api_key:
+    secure: iWU4W67JZDSD7z8U9oOrZrIrfUqyfda5OgtSSLxFEMbFQ53O2YqtfWDYHJEMQr+0FHuirYz24djWcJsO0nO9JpPjdNt33RE+iUVWbtAPrLBXFzGnW1bSyEG7JyX/lKwGGrHyEQPuZCBucrYmdPB9Wtpq3MTRfhnorTwNGWv4i6KcCcFSoPkPzMUCzIeW6EbbMV4YnsX9kzbKie6CMbOrDVhOHIvGyRfMrAv6+64i1KHkaPypJWDMJaguOQdRtGHRoSaa850YpqP6ohnnyMr478slWphUaV6tDX3VAwEJNkZctOQ0GZleSir/HpgGTvD4uk0PDbxQ1AobvhwO6wkxoOoy8NgmSCLbp4DVp8d8NgVRrrkEHoDXlbm0awpoRmAfwItHwjl6tM6LOa+KhvYWF/OHaUsHAGkHJy5d/kqnpkh1q2c6yDC0uFdIvrm91JaiYKN3ObxNCZSdJTTi1dO0k1fs4HV+4EWkZ4bmkvWhk3QTPsiXeYExedHAZ3ICEUjr95VYS9aT0hCCdhUJ5g4vN468h4luhKprH+fZDlqgkuDVrp8R7nnhJOZT369fUrFN+HUmuqoLn208H7pp84nxXqB2/uOMW9Zjk2s8I0VGYuCmWZsJPt81RNPmXLSuGnmeGJYwvi0LrfAb8x3OrQgMFM/dDosD0RJubHfx8ajoGFk=
+  file_glob: true
+    file: bin_release/*
+    skip_cleanup: true
+    on:
+      tags: true
+  go: 1.8
