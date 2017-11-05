@@ -1,7 +1,6 @@
 BIN=bin
 
 IMAGE_NAME=freenas-provisioner
-IMAGE_VERSION=0.7
 REMOTE_NAME=$(DOCKER_ID_USER)/$(IMAGE_NAME)
 
 all: build
@@ -9,7 +8,10 @@ all: build
 fmt:
 	go fmt ./...
 
-image: $(BIN)/freenas-provisioner check-docker-hub
+tmp:
+	mkdir -p tmp/
+
+image: tmp $(BIN)/freenas-provisioner check-docker-hub
 	docker build -t $(IMAGE_NAME):$(IMAGE_VERSION) -f Dockerfile.scratch .
 
 tag: image
@@ -19,7 +21,7 @@ push: tag
 	docker push $(REMOTE_NAME):$(IMAGE_VERSION)
 
 vendor:
-	glide install -v
+	glide install -v --strip-vcs
 
 $(BIN)/freenas-provisioner build: vendor $(BIN) $(shell find . -name "*.go")
 	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner .
@@ -30,6 +32,7 @@ darwin: vendor $(BIN) $(shell find . -name "*.go")
 clean:
 	go clean -i
 	rm -rf $(BIN)
+	rm -rf tmp/
 	rm -rf vendor
 
 $(BIN):

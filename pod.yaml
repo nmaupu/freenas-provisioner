@@ -6,7 +6,7 @@ metadata:
 spec:
   containers:
     - name: freenas-provisioner
-      image: docker.io/nmaupu/freenas-provisioner:0.7
+      image: docker.io/nmaupu/freenas-provisioner:1.0
       imagePullPolicy: Always
       env:
         - name: NODE_NAME
