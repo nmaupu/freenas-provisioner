@@ -34,7 +34,7 @@ spec:
       image: docker.io/nmaupu/freenas-provisioner:0.7
       imagePullPolicy: Always
       env:
-        - name: NODE_NAME
+        - name: IDENTIFIER
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName

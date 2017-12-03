@@ -1,7 +1,7 @@
 BIN=bin
 
 IMAGE_NAME=freenas-provisioner
-IMAGE_VERSION=1.0
+IMAGE_VERSION=1.1
 REMOTE_NAME=$(DOCKER_ID_USER)/$(IMAGE_NAME)
 
 all: build
@@ -13,7 +13,8 @@ tmp:
 	mkdir -p tmp/
 
 image: tmp check-docker-hub
-	wget -O tmp/freenas-provisioner https://github.com/nmaupu/freenas-provisioner/releases/download/v$(IMAGE_VERSION)/freenas-provisioner_linux-amd64
+	wget -O tmp/freenas-provisioner https://github.com/nmaupu/freenas-provisioner/releases/download/v$(IMAGE_VERSION)/freenas-provisioner_linux-amd64 && \
+		chmod +x tmp/freenas-provisioner
 	docker build -t $(IMAGE_NAME):$(IMAGE_VERSION) -f Dockerfile.scratch .
 
 tag: image
