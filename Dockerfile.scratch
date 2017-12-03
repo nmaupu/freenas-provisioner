@@ -1,3 +1,4 @@
 FROM scratch
 COPY tmp/freenas-provisioner /
+RUN  chmod +x /freenas-provisioner
 ENTRYPOINT ["/freenas-provisioner"]
