@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -29,7 +30,9 @@ const (
 
 var (
 	// cli parameters
+	kubeconfig                      *string
 	identifier                      *string
+	protocol                        *string
 	host                            *string
 	port                            *int
 	username, password              *string
@@ -45,10 +48,20 @@ func Process(appName, appDesc, appVersion string) {
 	app := cli.App(appName, appDesc)
 	app.Version("v version", fmt.Sprintf("%s version %s", appName, appVersion))
 
+	kubeconfig = app.String(cli.StringOpt{
+		Name:   "kubeconfig",
+		Desc:   "Path to kubernetes configuration file (for out of cluster execution)",
+		EnvVar: "KUBECONFIG",
+	})
 	identifier = app.String(cli.StringOpt{
 		Name:   "i identifier",
 		Desc:   "Provisioner identifier (e.g. if unsure set it to current node name)",
 		EnvVar: "IDENTIFIER",
+	})
+	protocol = app.String(cli.StringOpt{
+		Name:   "P protocol",
+		Desc:   "Freenas protocol (http|https)",
+		EnvVar: "FREENAS_PROTOCOL",
 	})
 	host = app.String(cli.StringOpt{
 		Name:   "h host",
@@ -72,8 +85,12 @@ func Process(appName, appDesc, appVersion string) {
 		Desc:   "Freenas password for the API connection",
 		EnvVar: "FREENAS_PASSWORD",
 	})
-	insecure = app.BoolOpt("insecure", false, "Skip SSL check for Freenas API communications (self-signed certificate)")
-
+	insecure = app.Bool(cli.BoolOpt{
+		Name:   "insecure",
+		Value:  false,
+		Desc:   "Skip SSL check for Freenas API communications (self-signed certificate)",
+		EnvVar: "FREENAS_INSECURE",
+	})
 	pool = app.String(cli.StringOpt{
 		Name:   "pool",
 		Value:  "tank",
@@ -98,6 +115,7 @@ func Process(appName, appDesc, appVersion string) {
 
 func execute() {
 	var err error
+	var config *rest.Config
 
 	/* Params checking */
 	var msgs []string
@@ -122,14 +140,19 @@ func execute() {
 
 	/* Everything's good so far, ready to start */
 	glog.Infoln("Starting freenas-provisioner with the following parameters:")
-	glog.Infof("  Freenas address: https://%s:%d\n", *host, *port)
+	glog.Infof("  Freenas address: %s://%s:%d\n", *protocol, *host, *port)
 	glog.Infof("  Insecure: %t\n", *insecure)
 	glog.Infof("  pool: %s\n", filepath.Join(*mountpoint, *pool))
 	glog.Infof("  parentDataset: %s\n", *parentDataset)
 
-	// Create an InClusterConfig and use it to create a client for the controller
-	// to use to communicate with Kubernetes
-	config, err := rest.InClusterConfig()
+	if *kubeconfig != "" {
+		// use the current context in kubeconfig
+		config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	} else {
+		// Create an InClusterConfig and use it to create a client for the controller
+		// to use to communicate with Kubernetes
+		config, err = rest.InClusterConfig()
+	}
 	if err != nil {
 		glog.Fatalf("Failed to create config: %v", err)
 	}
@@ -152,6 +175,7 @@ func execute() {
 		*parentDataset,
 		*identifier,
 		freenas.NewFreenasServer(
+			*protocol,
 			*host, *port,
 			*username, *password,
 			*insecure,

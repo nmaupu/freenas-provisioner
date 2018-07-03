@@ -22,5 +22,6 @@ import:
   - kubernetes
   - pkg/api/v1
   - rest
+  - tools/clientcmd
 - package: github.com/jawher/mow.cli
   version: ^1.0.3

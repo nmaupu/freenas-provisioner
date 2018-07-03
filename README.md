@@ -70,6 +70,18 @@ apiVersion: storage.k8s.io/v1beta1
 metadata:
   name: freenas-test-sc
 provisioner: maupu.org/freenas
+parameters:
+  # datasetNamespaces: "false"
+  # datasetDeterministicNames: "false"
+  # datasetEnableQuotas: "false"
+  # datasetEnableReservation: "false"
+  # shareAlldirs: "true"
+  # shareHosts: ""
+  # shareNetwork: ""
+  # shareMappallUser: "root"
+  # shareMappallGroup: "wheel"
+  # shareMaprootUser: ""
+  # shareMaprootGroup: ""
 ```
 
 Next, create a *persistent volume claim* using that storage class :
