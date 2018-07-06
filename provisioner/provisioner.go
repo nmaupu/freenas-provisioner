@@ -3,12 +3,13 @@ package provisioner
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
+
 	"github.com/golang/glog"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	"github.com/nmaupu/freenas-provisioner/freenas"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"
-	"path/filepath"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 type freenasProvisioner struct {
 	Pool, Mountpoint, ParentDataset string
 	Identifier                      string
-	NfsHosts, NfsNetwork						string
+	NfsHosts, NfsNetwork            string
 	FreenasServer                   *freenas.FreenasServer
 }
 
@@ -29,8 +30,8 @@ func New(pool, mountpoint, parentDataset, identifier string, nfs_hosts string, n
 		Mountpoint:    mountpoint,
 		ParentDataset: parentDataset,
 		Identifier:    identifier,
-		NfsHosts:			 nfs_hosts,
-		NfsNetwork:		 nfs_network,
+		NfsHosts:      nfs_hosts,
+		NfsNetwork:    nfs_network,
 		FreenasServer: freenasServer,
 	}
 }
