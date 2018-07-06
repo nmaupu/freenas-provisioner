@@ -32,6 +32,9 @@ $(BIN)/freenas-provisioner build: vendor $(BIN) $(shell find . -name "*.go")
 darwin: vendor $(BIN) $(shell find . -name "*.go")
 	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner-darwin .
 
+freebsd: vendor $(BIN) $(shell find . -name "*.go")
+	env CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner-freebsd .
+
 clean:
 	go clean -i
 	rm -rf $(BIN)

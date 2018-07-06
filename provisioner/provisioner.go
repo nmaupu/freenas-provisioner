@@ -7,8 +7,10 @@ import (
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	"github.com/nmaupu/freenas-provisioner/freenas"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -17,99 +19,262 @@ var (
 	_ controller.Provisioner = &freenasProvisioner{}
 )
 
-type freenasProvisioner struct {
-	Pool, Mountpoint, ParentDataset string
-	Identifier                      string
-	FreenasServer                   *freenas.FreenasServer
+type freenasProvisionerConfig struct {
+	// Dataset options
+	DatasetParentName               string
+	DatasetEnableQuotas             bool
+	DatasetEnableReservation        bool
+	DatasetEnableNamespaces         bool
+	DatasetEnableDeterministicNames bool
+	DatasetRetainPreExisting        bool
+	DatasetPermissionsMode          string
+	DatasetPermissionsUser          string
+	DatasetPermissionsGroup         string
+
+	// Share options
+	ShareHost              string
+	ShareAlldirs           bool
+	ShareAllowedHosts      string
+	ShareAllowedNetworks   string
+	ShareMaprootUser       string
+	ShareMaprootGroup      string
+	ShareMapallUser        string
+	ShareMapallGroup       string
+	ShareRetainPreExisting bool
+
+	// Server options
+	ServerSecretNamespace string
+	ServerSecretName      string
+	ServerProtocol        string
+	ServerHost            string
+	ServerPort            int
+	ServerUsername        string
+	ServerPassword        string
+	ServerAllowInsecure   bool
 }
 
-func New(pool, mountpoint, parentDataset, identifier string, freenasServer *freenas.FreenasServer) controller.Provisioner {
-	return &freenasProvisioner{
-		Pool:          pool,
-		Mountpoint:    mountpoint,
-		ParentDataset: parentDataset,
-		Identifier:    identifier,
-		FreenasServer: freenasServer,
-	}
-}
-
-func (p *freenasProvisioner) getMountpoint() string {
-	return filepath.Join(p.Mountpoint, p.Pool, p.ParentDataset)
-}
-
-// Provision a dataset and creates an NFS share on Freenas side
-func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
-	meta := options.PVC.GetObjectMeta()
-	deterministicNames := false
-	datasetNamespaces := false
-	dsName := options.PVName
-	dsNamespace := ""
-	if strings.ToLower(options.Parameters["datasetNamespaces"]) == "true" {
-		datasetNamespaces = true
-		dsNamespace = meta.GetNamespace()
+func (p *freenasProvisioner) GetConfig(storageClassName string) (*freenasProvisionerConfig, error) {
+	class, err := p.Client.StorageV1beta1().StorageClasses().Get(storageClassName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
 	}
 
-	if strings.ToLower(options.Parameters["datasetDeterministicNames"]) == "true" {
-		deterministicNames = true
-		if datasetNamespaces {
-			dsName = meta.GetName()
-		} else {
-			dsName = meta.GetNamespace() + "-" + meta.GetName()
-		}
-	}
+	// dataset defaults
+	var datasetParentName string = "tank"
+	var datasetEnableQuotas bool = true
+	var datasetEnableReservation bool = true
+	var datasetEnableNamespaces bool = true
+	var datasetEnableDeterministicNames bool = true
+	var datasetRetainPreExisting bool = true
+	var datasetPermissionsMode string = "0777"
+	var datasetPermissionsUser string = "root"
+	var datasetPermissionsGroup string = "wheel"
 
-	path := filepath.Join(p.getMountpoint(), dsNamespace, dsName)
-	glog.Infof("Provisioning %s", path)
-
-	datasetComments := fmt.Sprintf("%s/%s/%s", meta.GetClusterName(), meta.GetNamespace(), meta.GetName())
-
-	var datasetRefquota, datasetRefreservation, datasetRecordsize int64 = 0, 0, 0
-	var datasetPermissionsMode, datasetPermissionsUser, datasetPermissionsGroup string = "0777", "root", "wheel"
-	var shareHosts, shareNetwork, shareMapallUser, shareMapallGroup, shareMaprootUser, shareMaprootGroup string = "", "", "", "", "root", "wheel"
+	// share defaults
+	var shareHost string = ""
 	var shareAlldirs bool = true
+	var shareAllowedHosts string = ""
+	var shareAllowedNetworks string = ""
+	var shareMaprootUser string = "root"
+	var shareMaprootGroup string = "wheel"
+	var shareMapallUser string = ""
+	var shareMapallGroup string = ""
+	var shareRetainPreExisting bool = true
 
-	for k, v := range options.Parameters {
+	// server options
+	var serverSecretNamespace string = "kube-system"
+	var serverSecretName string = "freenas-nfs"
+	var serverProtocol string = "http"
+	var serverHost string = "localhost"
+	var serverPort int = 80
+	var serverUsername string = "root"
+	var serverPassword string = ""
+	var serverAllowInsecure bool = false
+
+	// set values from StorageClass parameters
+	for k, v := range class.Parameters {
 		switch k {
+		// Dataset options
+		case "datasetParentName":
+			datasetParentName = v
 		case "datasetEnableQuotas":
-			if strings.ToLower(v) == "true" {
-				volSize := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
-				datasetRefquota = volSize.Value()
-			}
+			datasetEnableQuotas, _ = strconv.ParseBool(v)
 		case "datasetEnableReservation":
-			if strings.ToLower(v) == "true" {
-				volSize := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
-				datasetRefreservation = volSize.Value()
-			}
+			datasetEnableReservation, _ = strconv.ParseBool(v)
+		case "datasetEnableNamespaces":
+			datasetEnableNamespaces, _ = strconv.ParseBool(v)
+		case "datasetEnableDeterministicNames":
+			datasetEnableDeterministicNames, _ = strconv.ParseBool(v)
+		case "datasetRetainPreExisting":
+			datasetRetainPreExisting, _ = strconv.ParseBool(v)
 		case "datasetPermissionsMode":
 			datasetPermissionsMode = v
 		case "datasetPermissionsUser":
 			datasetPermissionsUser = v
 		case "datasetPermissionsGroup":
 			datasetPermissionsGroup = v
-		case "shareHosts":
-			shareHosts = v
-		case "shareNetwork":
-			shareNetwork = v
-		case "shareMappallUser":
-			shareMapallUser = v
-		case "shareMapallGroup":
-			shareMapallGroup = v
+
+		// Share options
+		case "shareHost":
+			shareHost = v
+		case "shareAlldirs":
+			shareAlldirs, _ = strconv.ParseBool(v)
+		case "shareAllowedHosts":
+			shareAllowedHosts = v
+		case "shareAllowedNetworks":
+			shareAllowedNetworks = v
 		case "shareMaprootUser":
 			shareMaprootUser = v
 		case "shareMaprootGroup":
 			shareMaprootGroup = v
-		case "shareAlldirs":
-			if strings.ToLower(v) == "true" {
-				shareAlldirs = true
-			} else {
-				shareAlldirs = false
-			}
+		case "shareMappallUser":
+			shareMapallUser = v
+		case "shareMapallGroup":
+			shareMapallGroup = v
+		case "shareRetainPreExisting":
+			shareRetainPreExisting, _ = strconv.ParseBool(v)
+
+		// Server options
+		case "serverSecretNamespace":
+			serverSecretNamespace = v
+		case "serverSecretName":
+			serverSecretName = v
 		}
 	}
 
-	dsPath := filepath.Join(p.Pool, p.ParentDataset, dsNamespace, dsName)
+	secret, err := p.GetSecret(serverSecretNamespace, serverSecretName)
+	if err != nil {
+		return nil, err
+	}
+
+	// set values from secret
+	for k, v := range secret.Data {
+		switch k {
+		case "protocol":
+			serverProtocol = BytesToString(v)
+		case "host":
+			serverHost = BytesToString(v)
+		case "port":
+			serverPort, _ = strconv.Atoi(BytesToString(v))
+		case "username":
+			serverUsername = BytesToString(v)
+		case "password":
+			serverPassword = BytesToString(v)
+		case "allowInsecure":
+			serverAllowInsecure, _ = strconv.ParseBool(BytesToString(v))
+		}
+	}
+
+	if shareHost == "" {
+		shareHost = serverHost
+	}
+
+	return &freenasProvisionerConfig{
+		// Dataset options
+		DatasetParentName:               datasetParentName,
+		DatasetEnableQuotas:             datasetEnableQuotas,
+		DatasetEnableReservation:        datasetEnableReservation,
+		DatasetEnableNamespaces:         datasetEnableNamespaces,
+		DatasetEnableDeterministicNames: datasetEnableDeterministicNames,
+		DatasetRetainPreExisting:        datasetRetainPreExisting,
+		DatasetPermissionsMode:          datasetPermissionsMode,
+		DatasetPermissionsUser:          datasetPermissionsUser,
+		DatasetPermissionsGroup:         datasetPermissionsGroup,
+
+		// Share options
+		ShareHost:              shareHost,
+		ShareAlldirs:           shareAlldirs,
+		ShareAllowedHosts:      shareAllowedHosts,
+		ShareAllowedNetworks:   shareAllowedNetworks,
+		ShareMaprootUser:       shareMaprootUser,
+		ShareMaprootGroup:      shareMaprootGroup,
+		ShareMapallUser:        shareMapallUser,
+		ShareMapallGroup:       shareMapallGroup,
+		ShareRetainPreExisting: shareRetainPreExisting,
+
+		// Server options
+		ServerSecretNamespace: serverSecretNamespace,
+		ServerSecretName:      serverSecretName,
+		ServerProtocol:        serverProtocol,
+		ServerHost:            serverHost,
+		ServerPort:            serverPort,
+		ServerUsername:        serverUsername,
+		ServerPassword:        serverPassword,
+		ServerAllowInsecure:   serverAllowInsecure,
+	}, nil
+}
+
+type freenasProvisioner struct {
+	Client     kubernetes.Interface
+	Identifier string
+}
+
+func New(client kubernetes.Interface, identifier string) controller.Provisioner {
+	return &freenasProvisioner{
+		Client:     client,
+		Identifier: identifier,
+	}
+}
+
+// Provision a dataset and creates an NFS share on Freenas side
+func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
+	var err error
+
+	// get config
+	config, err := p.GetConfig(*options.PVC.Spec.StorageClassName)
+	if err != nil {
+		return nil, err
+	}
+	//glog.Infof("%+v\n", config)
+
+	// get server
+	freenasServer, err := p.GetServer(*config)
+	if err != nil {
+		return nil, err
+	}
+
+	// get parent dataset
+	parentDs := freenas.Dataset{
+		Name: config.DatasetParentName,
+	}
+	err = parentDs.Get(freenasServer)
+	if err != nil {
+		return nil, err
+	}
+
+	meta := options.PVC.GetObjectMeta()
+	dsName := options.PVName
+	dsNamespace := ""
+
+	if config.DatasetEnableNamespaces {
+		dsNamespace = meta.GetNamespace()
+	}
+
+	if config.DatasetEnableDeterministicNames {
+		if config.DatasetEnableNamespaces {
+			dsName = meta.GetName()
+		} else {
+			dsName = meta.GetNamespace() + "-" + meta.GetName()
+		}
+	}
+
+	path := filepath.Join(parentDs.Mountpoint, dsNamespace, dsName)
+	dsPath := filepath.Join(config.DatasetParentName, dsNamespace, dsName)
+	datasetComments := fmt.Sprintf("%s/%s/%s", meta.GetClusterName(), meta.GetNamespace(), meta.GetName())
+	var datasetRefquota, datasetRefreservation, datasetRecordsize int64 = 0, 0, 0
+
+	if config.DatasetEnableQuotas {
+		volSize := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
+		datasetRefquota = volSize.Value()
+	}
+
+	if config.DatasetEnableReservation {
+		volSize := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
+		datasetRefreservation = volSize.Value()
+	}
+
 	ds := freenas.Dataset{
-		Pool:           p.Pool,
+		Pool:           parentDs.Pool,
 		Name:           dsPath,
 		Refquota:       datasetRefquota,
 		Refreservation: datasetRefreservation,
@@ -120,75 +285,79 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 	share := freenas.NfsShare{
 		Paths:        []string{path},
 		ReadOnly:     false,
-		Alldirs:      shareAlldirs,
-		Hosts:        shareHosts,
-		Network:      shareNetwork,
-		MapallUser:   shareMapallUser,
-		MapallGroup:  shareMapallGroup,
-		MaprootUser:  shareMaprootUser,
-		MaprootGroup: shareMaprootGroup,
-		Comment:      fmt.Sprintf("freenas-provisioner (%s): %s", p.Identifier, dsName),
+		Alldirs:      config.ShareAlldirs,
+		Hosts:        config.ShareAllowedHosts,
+		Network:      config.ShareAllowedNetworks,
+		MapallUser:   config.ShareMapallUser,
+		MapallGroup:  config.ShareMapallGroup,
+		MaprootUser:  config.ShareMaprootUser,
+		MaprootGroup: config.ShareMaprootGroup,
+		Comment:      fmt.Sprintf("freenas-provisioner (%s): %s", p.Identifier, dsPath),
 	}
 
+	glog.Infof("Creating dataset: \"%s\", NFS share: \"%s\"", ds.Name, path)
+
 	// Provisioning dataset and nfs share
-	var err error
-	if datasetNamespaces {
+	var datasetPreExisted, sharePreExisted = false, false
+	if config.DatasetEnableNamespaces {
 		nsDs := freenas.Dataset{
-			Pool:     p.Pool,
-			Name:     filepath.Join(p.Pool, p.ParentDataset, dsNamespace),
+			Pool:     parentDs.Pool,
+			Name:     filepath.Join(parentDs.Name, dsNamespace),
 			Comments: "k8s provisioned namespace",
 		}
 
-		err = nsDs.Get(p.FreenasServer)
+		err = nsDs.Get(freenasServer)
 		if err != nil {
-			glog.Infof("creating namespace dataset %s", nsDs.Name)
-			err = nsDs.Create(p.FreenasServer)
+			glog.Infof("creating namespace dataset \"%s\"", nsDs.Name)
+			err = nsDs.Create(freenasServer)
 		} else {
-			glog.Infof("namespace dataset already exists %s", nsDs.Name)
+			glog.Infof("namespace dataset \"%s\" already exists", nsDs.Name)
 		}
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	if deterministicNames {
-		err = ds.Get(p.FreenasServer)
+	if config.DatasetEnableDeterministicNames {
+		err = ds.Get(freenasServer)
 
 		if err != nil {
-			err = ds.Create(p.FreenasServer)
+			err = ds.Create(freenasServer)
 		} else {
-			glog.Infof("dataset already exists %s", ds.Name)
-		}
-	} else {
-		err = ds.Create(p.FreenasServer)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	if deterministicNames {
-		err = share.Get(p.FreenasServer)
-		if err != nil {
-			err = share.Create(p.FreenasServer)
-		} else {
-			glog.Infof("share already exists %s", path)
+			datasetPreExisted = true
+			glog.Infof("dataset \"%s\" already exists", ds.Name)
 		}
 	} else {
-		err = share.Create(p.FreenasServer)
+		err = ds.Create(freenasServer)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	glog.Infof("setting permissions on path \"%s\" to - mode: %s, owner: %s:%s", path, datasetPermissionsMode, datasetPermissionsUser, datasetPermissionsGroup)
+	if config.DatasetEnableDeterministicNames {
+		err = share.Get(freenasServer)
+		if err != nil {
+			err = share.Create(freenasServer)
+		} else {
+			sharePreExisted = true
+			glog.Infof("share \"%s\" already exists", path)
+		}
+	} else {
+		err = share.Create(freenasServer)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	glog.Infof("setting permissions on path \"%s\" to - mode: %s, owner: %s:%s", path, config.DatasetPermissionsMode, config.DatasetPermissionsUser, config.DatasetPermissionsGroup)
 	permission := freenas.Permission{
 		Path:  path,
 		Acl:   "unix",
-		Mode:  datasetPermissionsMode,
-		User:  datasetPermissionsUser,
-		Group: datasetPermissionsGroup,
+		Mode:  config.DatasetPermissionsMode,
+		User:  config.DatasetPermissionsUser,
+		Group: config.DatasetPermissionsGroup,
 	}
-	err = permission.Put(p.FreenasServer)
+	err = permission.Put(freenasServer)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +366,11 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 		ObjectMeta: metav1.ObjectMeta{
 			Name: options.PVName,
 			Annotations: map[string]string{
-				"freenasProvisionerIdentity": p.Identifier,
+				"freenasNFSProvisionerIdentity": p.Identifier,
+				"datasetPreExisted":             strconv.FormatBool(datasetPreExisted),
+				"sharePreExisted":               strconv.FormatBool(sharePreExisted),
+				"datasetEnableQuotas":           strconv.FormatBool(config.DatasetEnableQuotas),
+				"datasetEnableReservation":      strconv.FormatBool(config.DatasetEnableReservation),
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
@@ -208,7 +381,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 			},
 			PersistentVolumeSource: v1.PersistentVolumeSource{
 				NFS: &v1.NFSVolumeSource{
-					Server:   p.FreenasServer.Host,
+					Server:   config.ShareHost,
 					Path:     path,
 					ReadOnly: false,
 				},
@@ -219,38 +392,111 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 	return pv, nil
 }
 
-func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
-	var err error
-	path := volume.Spec.PersistentVolumeSource.NFS.Path
+// Prep for resizing
+// https://github.com/kubernetes-incubator/external-storage/blob/master/gluster/file/cmd/glusterfile-provisioner/glusterfile-provisioner.go#L433
+/*
+func (p *freenasProvisioner) RequiresFSResize() bool {
+	return false
+}
 
+func (p *glusterfileProvisioner) ExpandVolumeDevice(spec *volume.Spec, newSize resource.Quantity, oldSize resource.Quantity) (resource.Quantity, error) {
+	return newVolumeSize, nil
+}
+*/
+
+func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
+	var datasetPreExisted, sharePreExisted bool = false, false
+	datasetPreExistedAnnotation, ok := volume.Annotations["datasetPreExisted"]
+	if ok {
+		datasetPreExisted, _ = strconv.ParseBool(datasetPreExistedAnnotation)
+	}
+
+	sharePreExistedAnnotation, ok := volume.Annotations["sharePreExisted"]
+	if ok {
+		sharePreExisted, _ = strconv.ParseBool(sharePreExistedAnnotation)
+	}
+
+	var err error
+
+	// get config
+	config, err := p.GetConfig(volume.Spec.StorageClassName)
+	if err != nil {
+		return err
+	}
+	//glog.Infof("%+v\n", config)
+
+	// get server
+	freenasServer, err := p.GetServer(*config)
+	if err != nil {
+		return err
+	}
+
+	// get parent dataset
+	parentDs := freenas.Dataset{
+		Name: config.DatasetParentName,
+	}
+	err = parentDs.Get(freenasServer)
+	if err != nil {
+		return err
+	}
+
+	// hydrate share
+	path := volume.Spec.PersistentVolumeSource.NFS.Path
 	share := freenas.NfsShare{
 		Paths: []string{path},
 	}
-	ds := freenas.Dataset{
-		Pool: p.Pool,
-		Name: strings.TrimPrefix(path, p.Mountpoint+"/"),
-	}
-	glog.Infof("Deleting dataset: %s, NFS share: %s", ds.Name, path)
 
-	err = share.Get(p.FreenasServer)
-	if err != nil {
-		glog.Warningf(fmt.Sprintf("Could not find NFS share %s on server side, already deleted ?", path))
-	} else {
-		err = share.Delete(p.FreenasServer)
+	// hydrate dataset
+	ds := freenas.Dataset{
+		Pool: parentDs.Pool,
+		Name: config.DatasetParentName + strings.SplitN(path, config.DatasetParentName, 2)[1],
+	}
+	glog.Infof("Deleting dataset: \"%s\", NFS share: \"%s\"", ds.Name, path)
+
+	// delete share
+	if (sharePreExisted == true && !config.ShareRetainPreExisting) || !sharePreExisted {
+		err = share.Get(freenasServer)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Could not delete NFS share %s on server side, ignoring. Error: %v", path, err))
+			glog.Warningf(fmt.Sprintf("Could not find NFS share \"%s\" on server side, already deleted?", path))
+		} else {
+			err = share.Delete(freenasServer)
+			if err != nil {
+				return errors.New(fmt.Sprintf("Could not delete NFS share \"%s\" on server side, ignoring. Error: %v", path, err))
+			}
 		}
 	}
 
-	err = ds.Get(p.FreenasServer)
-	if err != nil {
-		glog.Warningf(fmt.Sprintf("Could not find dataset %v on server side, already deleted ?", ds))
-	} else {
-		err = ds.Delete(p.FreenasServer)
+	// delete dataset
+	if (datasetPreExisted == true && !config.DatasetRetainPreExisting) || !datasetPreExisted {
+		err = ds.Get(freenasServer)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Cannot delete dataset %v. Error: %v", ds, err))
+			glog.Warningf(fmt.Sprintf("Could not find dataset \"%s\" on server side, already deleted ?", ds.Name))
+		} else {
+			err = ds.Delete(freenasServer)
+			if err != nil {
+				return errors.New(fmt.Sprintf("Cannot delete dataset \"%s\". Error: %v", ds.Name, err))
+			}
 		}
 	}
 
 	return nil
+}
+
+func (p *freenasProvisioner) GetServer(config freenasProvisionerConfig) (*freenas.FreenasServer, error) {
+	return freenas.NewFreenasServer(
+		config.ServerProtocol, config.ServerHost, config.ServerPort,
+		config.ServerUsername, config.ServerPassword,
+		config.ServerAllowInsecure,
+	), nil
+}
+
+func (p *freenasProvisioner) GetSecret(namespace, secretName string) (*v1.Secret, error) {
+	if p.Client == nil {
+		return nil, fmt.Errorf("Cannot get kube client")
+	}
+	return p.Client.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
+}
+
+func BytesToString(data []byte) string {
+	return string(data[:])
 }

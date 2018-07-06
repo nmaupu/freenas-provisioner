@@ -49,7 +49,8 @@ func (d *Dataset) CopyFrom(source FreenasResource) error {
 
 func (d *Dataset) Get(server *FreenasServer) error {
 	endpoint := fmt.Sprintf("/api/v1.0/storage/dataset/%s/", d.Name)
-	resp, err := server.getSlingConnection().Get(endpoint).ReceiveSuccess(nil)
+	var dataset Dataset
+	resp, err := server.getSlingConnection().Get(endpoint).ReceiveSuccess(&dataset)
 	if err != nil {
 		glog.Warningln(err)
 		return err
@@ -58,8 +59,10 @@ func (d *Dataset) Get(server *FreenasServer) error {
 
 	if resp.StatusCode != 200 {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error creating dataset - message: %v, status: %d", body, resp.StatusCode))
+		return errors.New(fmt.Sprintf("Error getting dataset \"%s\" - message: %v, status: %d", d.Name, body, resp.StatusCode))
 	}
+
+	d.CopyFrom(&dataset)
 
 	return nil
 }
@@ -84,7 +87,7 @@ func (d *Dataset) Create(server *FreenasServer) error {
 
 	if resp.StatusCode != 201 {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error creating dataset - message: %v, status: %d", body, resp.StatusCode))
+		return errors.New(fmt.Sprintf("Error creating dataset \"%s\" - message: %v, status: %d", d.Name, body, resp.StatusCode))
 	}
 
 	return nil
@@ -101,7 +104,7 @@ func (d *Dataset) Delete(server *FreenasServer) error {
 
 	if resp.StatusCode != 204 {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error deleting dataset %+v - %v", *d, body))
+		return errors.New(fmt.Sprintf("Error deleting dataset \"%s\" - %v", d.Name, body))
 	}
 
 	return nil
