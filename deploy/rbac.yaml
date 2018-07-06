@@ -16,7 +16,7 @@ rules:
 - apiGroups: [""]
   resources: ["persistentvolumeclaims"]
   verbs: ["get", "list", "watch", "update"]
-- apiGroups: [""]
+- apiGroups: ["storage.k8s.io"]
   resources: ["storageclasses"]
   verbs: ["get", "list", "watch"]
 - apiGroups: [""]
@@ -33,5 +33,5 @@ roleRef:
   name: freenas-nfs-provisioner
 subjects:
 - kind: ServiceAccount
-  name: freenas--nfs-provisioner
+  name: freenas-nfs-provisioner
   namespace: kube-system
