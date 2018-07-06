@@ -35,6 +35,7 @@ var (
 	username, password              *string
 	insecure                        *bool
 	pool, mountpoint, parentDataset *string
+	nfs_hosts, nfs_network					*string
 )
 
 // Process all command line parameters
@@ -90,6 +91,18 @@ func Process(appName, appDesc, appVersion string) {
 		Name:   "parentDataset",
 		Desc:   "Parent dataset to use e.g. /<mountpoint>/<pool>/<parentDataset>, parent dataset must already exist !",
 		EnvVar: "FREENAS_PARENT_DATASET",
+	})
+	nfs_hosts = app.String(cli.StringOpt{
+		Name:   "nfshosts",
+		Desc:   "List of Hostnames or IP to allow on the NFS Exports created",
+		Value:  "",
+		EnvVar: "FREENAS_NFS_HOSTS",
+	})
+	nfs_network = app.String(cli.StringOpt{
+		Name:   "nfsnetwork",
+		Desc:   "List of Network Ranges to allow on the NFS Exports created",
+		Value:  "",
+		EnvVar: "FREENAS_NFS_NETWORK",
 	})
 
 	app.Action = execute
@@ -151,6 +164,8 @@ func execute() {
 		*mountpoint,
 		*parentDataset,
 		*identifier,
+		*nfs_hosts,
+		*nfs_network,
 		freenas.NewFreenasServer(
 			*host, *port,
 			*username, *password,

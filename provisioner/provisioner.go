@@ -3,12 +3,13 @@ package provisioner
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
+
 	"github.com/golang/glog"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	"github.com/nmaupu/freenas-provisioner/freenas"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"
-	"path/filepath"
 )
 
 var (
@@ -19,15 +20,18 @@ var (
 type freenasProvisioner struct {
 	Pool, Mountpoint, ParentDataset string
 	Identifier                      string
+	NfsHosts, NfsNetwork            string
 	FreenasServer                   *freenas.FreenasServer
 }
 
-func New(pool, mountpoint, parentDataset, identifier string, freenasServer *freenas.FreenasServer) controller.Provisioner {
+func New(pool, mountpoint, parentDataset, identifier string, nfs_hosts string, nfs_network string, freenasServer *freenas.FreenasServer) controller.Provisioner {
 	return &freenasProvisioner{
 		Pool:          pool,
 		Mountpoint:    mountpoint,
 		ParentDataset: parentDataset,
 		Identifier:    identifier,
+		NfsHosts:      nfs_hosts,
+		NfsNetwork:    nfs_network,
 		FreenasServer: freenasServer,
 	}
 }
@@ -50,7 +54,8 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 		Paths:       []string{path},
 		ReadOnly:    false,
 		Alldirs:     true,
-		Hosts:       "knode1 knode2 knode3",
+		Hosts:       p.NfsHosts,
+		Network:     p.NfsNetwork,
 		MapallUser:  "root",
 		MapallGroup: "wheel",
 		Comment:     "Created from freenas-provisioner",
