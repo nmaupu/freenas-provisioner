@@ -8,7 +8,7 @@ make the corresponding calls to the configured FreeNAS API to create a dataset
 and a NFS share usable by the claim. When the claim or the persistent volume is
 deleted, the provisioner deletes the previously created dataset and share.
 
-See this for more info on external provisioner :
+See this for more info on external provisioner:
 https://github.com/kubernetes-incubator/external-storage
 
 # Usage
@@ -26,11 +26,11 @@ used.  While multiple `StorageClass` resources may point to the same server
 and hence same `Secret`, it is recommended to create a new `Secret` for each
 `StorageClass` resource.
 
-It is **highly** recommended to review `deploy/claim.yaml` to review available
+It is **highly** recommended to read `deploy/claim.yaml` to review available
 `parameters` and gain a better understanding of functionality and behavior.
 
 ## FreeNAS Setup
-You must manually create a dataset.  You may simply use your pool as the parent
+You must manually create a dataset.  You may simply use a pool as the parent
 dataset but it's recommended to create a dedicated dataset.
 
 Additionally, you need to enabled the NFS service.  It's highly recommended to
@@ -40,11 +40,11 @@ to enable the `NFSv3 ownership model for NFSv4` option.
 ## Provision the provisioner
 Run it on the cluster:
 ```
-kubectl apply -f deploy/deployment.yaml
+kubectl apply -f deploy/rbac.yaml -f deploy/deployment.yaml
 ```
 
 Alternatively, for advanced use-cases you may run the provisioner out of cluster
-directly on the FreeNAS server.  This is not recommended.
+directly on the FreeNAS server.  This is not currently recommended.
 ```
 ./bin/freenas-provisioner-freebsd --kubeconfig=/path/to/kubeconfig.yaml
 ```
@@ -59,7 +59,7 @@ kubectl apply -f deploy/class.yaml -f deploy/secret.yaml
 ```
 
 ## Example usage
-Next, create a *persistent volume claim* using that storage class
+Next, create a `PersistentVolumeClaim` using the storage class
 (`deploy/test-claim.yaml`):
 ```
 ---
@@ -107,8 +107,8 @@ Create everything:
 kubectl apply -f deploy/
 ```
 
-The underlying dataset / NFS share should quickly be poping up on FreeNAS side.
-In case of issue, follow the provisioner's logs using:
+The underlying dataset / NFS share should quickly be appearing up on FreeNAS
+side.  In case of issue, follow the provisioner's logs using:
 ```
 kubectl -n kube-system logs -f freenas-nfs-provisioner-<id>
 ```
@@ -154,5 +154,5 @@ go fmt ./...
 ## Notes
 To sniff API traffic between host and server:
 ```
-sudo tcpdump -A -s 0 'host <host ip> and tcp port 80 and (((ip[2:2] - ((ip[0]&0xf)<<2)) - ((tcp[12]&0xf0)>>2)) != 0)'
+sudo tcpdump -A -s 0 'host <server ip> and tcp port 80 and (((ip[2:2] - ((ip[0]&0xf)<<2)) - ((tcp[12]&0xf0)>>2)) != 0)'
 ```
