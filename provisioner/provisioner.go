@@ -369,6 +369,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 				"freenasNFSProvisionerIdentity": p.Identifier,
 				"datasetPreExisted":             strconv.FormatBool(datasetPreExisted),
 				"sharePreExisted":               strconv.FormatBool(sharePreExisted),
+				"shareId":                       strconv.Itoa(share.Id),
 				"datasetEnableQuotas":           strconv.FormatBool(config.DatasetEnableQuotas),
 				"datasetEnableReservation":      strconv.FormatBool(config.DatasetEnableReservation),
 			},
@@ -406,6 +407,13 @@ func (p *glusterfileProvisioner) ExpandVolumeDevice(spec *volume.Spec, newSize r
 
 func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
 	var datasetPreExisted, sharePreExisted bool = false, false
+	var shareId int
+
+	shareIdAnnotation, ok := volume.Annotations["shareId"]
+	if ok {
+		shareId, _ = strconv.Atoi(shareIdAnnotation)
+	}
+
 	datasetPreExistedAnnotation, ok := volume.Annotations["datasetPreExisted"]
 	if ok {
 		datasetPreExisted, _ = strconv.ParseBool(datasetPreExistedAnnotation)
@@ -443,6 +451,7 @@ func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
 	// hydrate share
 	path := volume.Spec.PersistentVolumeSource.NFS.Path
 	share := freenas.NfsShare{
+		Id:    shareId,
 		Paths: []string{path},
 	}
 

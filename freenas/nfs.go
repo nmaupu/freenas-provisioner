@@ -49,6 +49,20 @@ func (n *NfsShare) CopyFrom(source FreenasResource) error {
 }
 
 func (n *NfsShare) Get(server *FreenasServer) error {
+	if n.Id > 0 {
+		endpoint := fmt.Sprintf("/api/v1.0/sharing/nfs/%d/", n.Id)
+		var nfs NfsShare
+		resp, err := server.getSlingConnection().Get(endpoint).ReceiveSuccess(&nfs)
+		if err != nil {
+			glog.Warningln(err)
+			return err
+		}
+		defer resp.Body.Close()
+
+		n.CopyFrom(&nfs)
+		return nil
+	}
+
 	endpoint := "/api/v1.0/sharing/nfs/?limit=1000"
 	var shares []NfsShare
 	resp, err := server.getSlingConnection().Get(endpoint).ReceiveSuccess(&shares)
@@ -81,7 +95,8 @@ func (s *NfsShare) contains(path string) bool {
 
 func (n *NfsShare) Create(server *FreenasServer) error {
 	endpoint := "/api/v1.0/sharing/nfs/"
-	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(n).Receive(nil, nil)
+	var nfs NfsShare
+	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(n).Receive(&nfs, nil)
 	if err != nil {
 		glog.Warningln(err)
 		return err
@@ -92,6 +107,8 @@ func (n *NfsShare) Create(server *FreenasServer) error {
 		body, _ := ioutil.ReadAll(resp.Body)
 		return errors.New(fmt.Sprintf("Error creating NFS share for %+v - %v", *n, body))
 	}
+
+	n.CopyFrom(&nfs)
 
 	return nil
 }

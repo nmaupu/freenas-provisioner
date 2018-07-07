@@ -70,11 +70,12 @@ func (d *Dataset) Get(server *FreenasServer) error {
 func (d *Dataset) Create(server *FreenasServer) error {
 	parent, dsName := filepath.Split(d.Name)
 	endpoint := fmt.Sprintf("/api/v1.0/storage/dataset/%s", parent)
+	var dataset Dataset
 
 	// rewrite Name attribute to support crazy api semantics
 	d.Name = dsName
 
-	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(d).Receive(nil, nil)
+	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(d).Receive(&dataset, nil)
 
 	// rewrite Name attribute to support crazy api semantics
 	d.Name = filepath.Join(parent, dsName)
@@ -89,6 +90,8 @@ func (d *Dataset) Create(server *FreenasServer) error {
 		body, _ := ioutil.ReadAll(resp.Body)
 		return errors.New(fmt.Sprintf("Error creating dataset \"%s\" - message: %v, status: %d", d.Name, body, resp.StatusCode))
 	}
+
+	d.CopyFrom(&dataset)
 
 	return nil
 }
