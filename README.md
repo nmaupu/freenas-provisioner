@@ -132,7 +132,7 @@ To run locally with an appropriate `$KUBECONFIG` you may run:
 
 To format code before committing:
 ```
-go fmt ./...
+make fmt
 ```
 
 ## Docs
