@@ -1,7 +1,7 @@
 BIN=bin
 
 IMAGE_NAME=freenas-provisioner
-IMAGE_VERSION=1.1
+IMAGE_VERSION=2.0
 REMOTE_NAME=$(DOCKER_ID_USER)/$(IMAGE_NAME)
 
 all: build
