@@ -1,0 +1,96 @@
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: freenas-nfs
+#  annotations:
+#    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: freenas.org/nfs
+allowVolumeExpansion: true
+parameters:
+  # namespace of the secret which contains FreeNAS server connection details
+  # default: kube-system
+  #serverSecretNamespace:
+   
+  # name of the secret which contains FreeNAS server connection details
+  # default: freenas-nfs
+  #serverSecretName:
+  
+  # the name of the parent dataset (or simply pool) where all resources will
+  # be created, it *must* exist before provisioner will work
+  # example: tank/k8s/mycluster
+  # default: tank
+  #datasetParentName:
+  
+  # whether to enforce quotas for each dataset
+  # if enabled each newly provisioned dataset will set the appropriate quota
+  # per the PVC
+  # default: true
+  #datasetEnableQuotas:
+  
+  # whether to reserve space when the dataset is create
+  # if enabled each newly provisioned dataset will set the appropriate value
+  # per the PVC
+  # default: true
+  #datasetEnableReservation:
+  
+  # if enabled provisioner will create parent datasets for each namespace
+  # otherwise, all datasets will be provisioned in a flat manner
+  # default: true
+  #datasetNamespaces:
+  
+  # if enabled created datasets will adhere to reliable pattern
+  # if datasetNamespaces == true dataset pattern is: <datasetParentName>/<namespace>/<PVC Name>
+  # if datasetNamespaces == false dataset pattern is: <datasetParentName>/<namespace>-<PVC Name>
+  # if disabled, datasets will be created with a name pvc-<uid> (the name of the provisioned PV)
+  # default: true
+  #datasetDeterministicNames:
+
+  # if enabled and datasetDeterministicNames is enabled then dataset that
+  # already exist (pre-povisioned out of band) will be ratained by the
+  # provisioner during deletion of the reclaim process
+  # ignored if datasetDeterministicNames is disabled (collisions result in failure)
+  # default: true
+  #datasetRetainPreExisting:
+
+  # the following parameters determine permissions and ownership of the
+  # dataset mount directory (on FreeNAS) immediately upon creation
+  # default: 0777, root, wheel
+  #datasetPermissionsMode
+  #datasetPermissionsUser
+  #datasetPermissionsGroup
+ 
+  # this determins what the 'server' property of the NFS share will be in
+  # in kubernetes, it's purpose is to provide flexibility between the control
+  # and data planes of FreeNAS
+  # default: uses the 'host' value from the secret
+  #shareHost:
+ 
+  # determines if newly created NFS shares will have the 'All Directories'
+  # option checked
+  # default: true
+  #shareAlldirs:
+ 
+  # Authorized hosts/networks (space-separated) allowed to access the shares
+  # default: ""
+  #shareAllowedHosts:
+  #shareAllowedNetworks:
+
+  # Determines root mapping
+  # cannot be used simultaneously with shareMapAll{User,Group}
+  # default: root:wheel
+  #shareMaprootUser:
+  #shareMaprootGroup:
+  
+  # Determines user mapping for all access (not recommended)
+  # cannot be used simultaneously with shareMaproot{User,Group}
+  # default: root:wheel
+  #shareMapalltUser:
+  #shareMapallGroup:
+
+  # if enabled and datasetDeterministicNames is enabled then shares that
+  # already exist (pre-povisioned out of band) will be ratained by the
+  # provisioner during deletion of the reclaim process
+  # ignored if datasetDeterministicNames is disabled (collisions result in failure)
+  # default: true
+  #shareRetainPreExisting:

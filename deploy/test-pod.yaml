@@ -1,22 +1,4 @@
 ---
-kind: StorageClass
-apiVersion: storage.k8s.io/v1beta1
-metadata:
-  name: freenas-test-sc
-provisioner: maupu.org/freenas
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: freenas-test-pvc
-spec:
-  storageClassName: freenas-test-sc
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Mi
----
 kind: Pod
 apiVersion: v1
 metadata:

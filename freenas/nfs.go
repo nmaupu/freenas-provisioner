@@ -22,6 +22,7 @@ type NfsShare struct {
 	MaprootGroup string   `json:"nfs_maproot_group,omitempty"`
 	Network      string   `json:"nfs_network,omitempty"`
 	Paths        []string `json:"nfs_paths"`
+	Security     []string `json:"nfs_security"`
 	Quiet        bool     `json:"nfs_quiet,omitempty"`
 	ReadOnly     bool     `json:"nfs_ro,omitempty"`
 }
@@ -39,6 +40,7 @@ func (n *NfsShare) CopyFrom(source FreenasResource) error {
 		n.MaprootGroup = src.MaprootGroup
 		n.Network = src.Network
 		n.Paths = src.Paths
+		n.Security = src.Security
 		n.Quiet = src.Quiet
 		n.ReadOnly = src.ReadOnly
 	}
