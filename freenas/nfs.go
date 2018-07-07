@@ -60,6 +60,7 @@ func (n *NfsShare) Get(server *FreenasServer) error {
 		defer resp.Body.Close()
 
 		n.CopyFrom(&nfs)
+
 		return nil
 	}
 
