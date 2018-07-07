@@ -84,7 +84,7 @@ parameters:
   
   # Determines user mapping for all access (not recommended)
   # cannot be used simultaneously with shareMaproot{User,Group}
-  # default: root:wheel
+  # default: ""
   #shareMapalltUser:
   #shareMapallGroup:
 
