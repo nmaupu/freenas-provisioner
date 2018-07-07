@@ -1,3 +1,0 @@
-FROM scratch
-COPY tmp/freenas-provisioner /
-ENTRYPOINT ["/freenas-provisioner"]
