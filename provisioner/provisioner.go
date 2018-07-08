@@ -403,6 +403,11 @@ func (p *freenasProvisioner) RequiresFSResize() bool {
 func (p *glusterfileProvisioner) ExpandVolumeDevice(spec *volume.Spec, newSize resource.Quantity, oldSize resource.Quantity) (resource.Quantity, error) {
 	return newVolumeSize, nil
 }
+
+func (p *iscsiProvisioner) SupportsBlock() bool {
+	return true
+}
+
 */
 
 func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
