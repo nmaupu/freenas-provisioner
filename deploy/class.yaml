@@ -37,7 +37,7 @@ parameters:
   # if enabled provisioner will create parent datasets for each namespace
   # otherwise, all datasets will be provisioned in a flat manner
   # default: true
-  #datasetNamespaces:
+  #datasetEnableNamespaces:
   
   # if enabled created datasets will adhere to reliable pattern
   # if datasetNamespaces == true dataset pattern is: <datasetParentName>/<namespace>/<PVC Name>

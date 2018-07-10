@@ -372,6 +372,9 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 				"shareId":                       strconv.Itoa(share.Id),
 				"datasetEnableQuotas":           strconv.FormatBool(config.DatasetEnableQuotas),
 				"datasetEnableReservation":      strconv.FormatBool(config.DatasetEnableReservation),
+				"datasetParent":                 config.DatasetParentName,
+				"dataset":                       ds.Name,
+				"pool":                          parentDs.Pool,
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
@@ -429,6 +432,9 @@ func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
 		sharePreExisted, _ = strconv.ParseBool(sharePreExistedAnnotation)
 	}
 
+	poolName := volume.Annotations["pool"]
+	datasetName := volume.Annotations["dataset"]
+
 	var err error
 
 	// get config
@@ -461,9 +467,17 @@ func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
 	}
 
 	// hydrate dataset
-	ds := freenas.Dataset{
-		Pool: parentDs.Pool,
-		Name: config.DatasetParentName + strings.SplitN(path, config.DatasetParentName, 2)[1],
+	var ds freenas.Dataset
+	if len(poolName) > 0 && len(datasetName) > 0 {
+		ds = freenas.Dataset{
+			Pool: poolName,
+			Name: datasetName,
+		}
+	} else {
+		ds = freenas.Dataset{
+			Pool: parentDs.Pool,
+			Name: config.DatasetParentName + strings.SplitN(path, config.DatasetParentName, 2)[1],
+		}
 	}
 	glog.Infof("Deleting dataset: \"%s\", NFS share: \"%s\"", ds.Name, path)
 
