@@ -223,7 +223,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 	// get config
 	config, err := p.GetConfig(*options.PVC.Spec.StorageClassName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed getting storage class configuration for %v: %v", *options.PVC.Spec.StorageClassName, err.Error())
 	}
 	//glog.Infof("%+v\n", config)
 
