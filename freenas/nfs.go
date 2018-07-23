@@ -1,10 +1,10 @@
 package freenas
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/golang/glog"
-	"io/ioutil"
 )
 
 var (
@@ -52,12 +52,18 @@ func (n *NfsShare) Get(server *FreenasServer) error {
 	if n.Id > 0 {
 		endpoint := fmt.Sprintf("/api/v1.0/sharing/nfs/%d/", n.Id)
 		var nfs NfsShare
-		resp, err := server.getSlingConnection().Get(endpoint).ReceiveSuccess(&nfs)
+		var e interface{}
+		resp, err := server.getSlingConnection().Get(endpoint).Receive(&nfs, &e)
 		if err != nil {
 			glog.Warningln(err)
 			return err
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			body, _ := json.Marshal(e)
+			return errors.New(fmt.Sprintf("Error getting NFS share \"%s\" - message: %v, status: %d", n.Paths, string(body), resp.StatusCode))
+		}
 
 		n.CopyFrom(&nfs)
 
@@ -66,12 +72,19 @@ func (n *NfsShare) Get(server *FreenasServer) error {
 
 	endpoint := "/api/v1.0/sharing/nfs/?limit=1000"
 	var shares []NfsShare
-	resp, err := server.getSlingConnection().Get(endpoint).ReceiveSuccess(&shares)
+	var e interface{}
+	resp, err := server.getSlingConnection().Get(endpoint).Receive(&shares, &e)
+
 	if err != nil {
 		glog.Warningln(err)
-		return nil
+		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := json.Marshal(e)
+		return errors.New(fmt.Sprintf("Error getting NFS share \"%s\" - message: %v, status: %d", n.Paths, string(body), resp.StatusCode))
+	}
 
 	for _, share := range shares {
 		if share.contains(n.Paths[0]) {
@@ -97,7 +110,8 @@ func (s *NfsShare) contains(path string) bool {
 func (n *NfsShare) Create(server *FreenasServer) error {
 	endpoint := "/api/v1.0/sharing/nfs/"
 	var nfs NfsShare
-	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(n).Receive(&nfs, nil)
+	var e interface{}
+	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(n).Receive(&nfs, &e)
 	if err != nil {
 		glog.Warningln(err)
 		return err
@@ -105,8 +119,8 @@ func (n *NfsShare) Create(server *FreenasServer) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 201 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error creating NFS share for %+v - %v", *n, body))
+		body, _ := json.Marshal(e)
+		return errors.New(fmt.Sprintf("Error creating NFS share for %+v - %v", *n, string(body)))
 	}
 
 	n.CopyFrom(&nfs)
@@ -116,9 +130,18 @@ func (n *NfsShare) Create(server *FreenasServer) error {
 
 func (n *NfsShare) Delete(server *FreenasServer) error {
 	endpoint := fmt.Sprintf("/api/v1.0/sharing/nfs/%d/", n.Id)
-	_, err := server.getSlingConnection().Delete(endpoint).Receive(nil, nil)
+	var e interface{}
+	resp, err := server.getSlingConnection().Delete(endpoint).Receive(nil, &e)
 	if err != nil {
 		glog.Warningln(err)
+		return err
 	}
-	return err
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 204 {
+		body, _ := json.Marshal(e)
+		return errors.New(fmt.Sprintf("Error deleting NFS share \"%s\" - %v", n.Paths, string(body)))
+	}
+
+	return nil
 }

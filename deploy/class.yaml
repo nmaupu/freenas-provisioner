@@ -39,6 +39,17 @@ parameters:
   # default: true
   #datasetEnableNamespaces:
   
+  # if datasetEnableNamespaces is enabled, sets a per-namespace quota
+  # example: 5M | 10G | 1T  (M, Mi, MB, MiB, G, Gi, GB, GiB, T, Ti, TB, or TiB)
+  # default: 0 (no quota)
+  #datasetNamespaceQuota:
+  
+  # if datasetEnableNamespaces is enabled, sets a per-namespace reservation
+  # this should not be greater than the datasetNamespaceQuota
+  # example: 5M | 10G | 1T  (M, Mi, MB, MiB, G, Gi, GB, GiB, T, Ti, TB, or TiB)
+  # default: 0
+  #datasetNamespaceReservation:
+  
   # if enabled created datasets will adhere to reliable pattern
   # if datasetNamespaces == true dataset pattern is: <datasetParentName>/<namespace>/<PVC Name>
   # if datasetNamespaces == false dataset pattern is: <datasetParentName>/<namespace>-<PVC Name>
