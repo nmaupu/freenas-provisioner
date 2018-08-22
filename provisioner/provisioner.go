@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"code.cloudfoundry.org/bytefmt"
 	"errors"
 	"fmt"
 	"github.com/golang/glog"
@@ -25,6 +26,8 @@ type freenasProvisionerConfig struct {
 	DatasetEnableQuotas             bool
 	DatasetEnableReservation        bool
 	DatasetEnableNamespaces         bool
+	DatasetNamespaceQuota           int64
+	DatasetNamespaceReservation     int64
 	DatasetEnableDeterministicNames bool
 	DatasetRetainPreExisting        bool
 	DatasetPermissionsMode          string
@@ -64,6 +67,8 @@ func (p *freenasProvisioner) GetConfig(storageClassName string) (*freenasProvisi
 	var datasetEnableQuotas bool = true
 	var datasetEnableReservation bool = true
 	var datasetEnableNamespaces bool = true
+	var datasetNamespaceQuota int64 = 0
+	var datasetNamespaceReservation int64 = 0
 	var datasetEnableDeterministicNames bool = true
 	var datasetRetainPreExisting bool = true
 	var datasetPermissionsMode string = "0777"
@@ -103,6 +108,18 @@ func (p *freenasProvisioner) GetConfig(storageClassName string) (*freenasProvisi
 			datasetEnableReservation, _ = strconv.ParseBool(v)
 		case "datasetEnableNamespaces":
 			datasetEnableNamespaces, _ = strconv.ParseBool(v)
+		case "datasetNamespaceQuota":
+			datasetNamespaceQuotaUint, err := bytefmt.ToBytes(v)
+			if err != nil {
+				return nil, err
+			}
+			datasetNamespaceQuota = int64(datasetNamespaceQuotaUint)
+		case "datasetNamespaceReservation":
+			datasetNamespaceReservationUint, err := bytefmt.ToBytes(v)
+			if err != nil {
+				return nil, err
+			}
+			datasetNamespaceReservation = int64(datasetNamespaceReservationUint)
 		case "datasetEnableDeterministicNames":
 			datasetEnableDeterministicNames, _ = strconv.ParseBool(v)
 		case "datasetRetainPreExisting":
@@ -175,6 +192,8 @@ func (p *freenasProvisioner) GetConfig(storageClassName string) (*freenasProvisi
 		DatasetEnableQuotas:             datasetEnableQuotas,
 		DatasetEnableReservation:        datasetEnableReservation,
 		DatasetEnableNamespaces:         datasetEnableNamespaces,
+		DatasetNamespaceQuota:           datasetNamespaceQuota,
+		DatasetNamespaceReservation:     datasetNamespaceReservation,
 		DatasetEnableDeterministicNames: datasetEnableDeterministicNames,
 		DatasetRetainPreExisting:        datasetRetainPreExisting,
 		DatasetPermissionsMode:          datasetPermissionsMode,
@@ -301,9 +320,11 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 	var datasetPreExisted, sharePreExisted = false, false
 	if config.DatasetEnableNamespaces {
 		nsDs := freenas.Dataset{
-			Pool:     parentDs.Pool,
-			Name:     filepath.Join(parentDs.Name, dsNamespace),
-			Comments: "k8s provisioned namespace",
+			Pool:        parentDs.Pool,
+			Name:        filepath.Join(parentDs.Name, dsNamespace),
+			Quota:       config.DatasetNamespaceQuota,
+			Reservation: config.DatasetNamespaceReservation,
+			Comments:    "k8s provisioned namespace",
 		}
 
 		err = nsDs.Get(freenasServer)
@@ -369,8 +390,12 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 				"freenasNFSProvisionerIdentity": p.Identifier,
 				"datasetPreExisted":             strconv.FormatBool(datasetPreExisted),
 				"sharePreExisted":               strconv.FormatBool(sharePreExisted),
+				"shareId":                       strconv.Itoa(share.Id),
 				"datasetEnableQuotas":           strconv.FormatBool(config.DatasetEnableQuotas),
 				"datasetEnableReservation":      strconv.FormatBool(config.DatasetEnableReservation),
+				"datasetParent":                 config.DatasetParentName,
+				"dataset":                       ds.Name,
+				"pool":                          parentDs.Pool,
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
@@ -402,10 +427,22 @@ func (p *freenasProvisioner) RequiresFSResize() bool {
 func (p *glusterfileProvisioner) ExpandVolumeDevice(spec *volume.Spec, newSize resource.Quantity, oldSize resource.Quantity) (resource.Quantity, error) {
 	return newVolumeSize, nil
 }
+
+func (p *iscsiProvisioner) SupportsBlock() bool {
+	return true
+}
+
 */
 
 func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
 	var datasetPreExisted, sharePreExisted bool = false, false
+	var shareId int
+
+	shareIdAnnotation, ok := volume.Annotations["shareId"]
+	if ok {
+		shareId, _ = strconv.Atoi(shareIdAnnotation)
+	}
+
 	datasetPreExistedAnnotation, ok := volume.Annotations["datasetPreExisted"]
 	if ok {
 		datasetPreExisted, _ = strconv.ParseBool(datasetPreExistedAnnotation)
@@ -415,6 +452,9 @@ func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
 	if ok {
 		sharePreExisted, _ = strconv.ParseBool(sharePreExistedAnnotation)
 	}
+
+	poolName := volume.Annotations["pool"]
+	datasetName := volume.Annotations["dataset"]
 
 	var err error
 
@@ -443,13 +483,22 @@ func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
 	// hydrate share
 	path := volume.Spec.PersistentVolumeSource.NFS.Path
 	share := freenas.NfsShare{
+		Id:    shareId,
 		Paths: []string{path},
 	}
 
 	// hydrate dataset
-	ds := freenas.Dataset{
-		Pool: parentDs.Pool,
-		Name: config.DatasetParentName + strings.SplitN(path, config.DatasetParentName, 2)[1],
+	var ds freenas.Dataset
+	if len(poolName) > 0 && len(datasetName) > 0 {
+		ds = freenas.Dataset{
+			Pool: poolName,
+			Name: datasetName,
+		}
+	} else {
+		ds = freenas.Dataset{
+			Pool: parentDs.Pool,
+			Name: config.DatasetParentName + strings.SplitN(path, config.DatasetParentName, 2)[1],
+		}
 	}
 	glog.Infof("Deleting dataset: \"%s\", NFS share: \"%s\"", ds.Name, path)
 

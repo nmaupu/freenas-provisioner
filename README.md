@@ -14,7 +14,7 @@ https://github.com/kubernetes-incubator/external-storage
 # Usage
 The scope of the provisioner allows for a single instance to service multiple
 classes (and/or FreeNAS servers).  The provisioner itself can be deployed into
-the cluster or ran directly on a FreeNAS server.
+the cluster or ran out of cluster, for example, directly on a FreeNAS server.
 
 Each `StorageClass` should have a corresponding `Secret` created which contains
 the credentials and host information used to communicate with with FreeNAS API.
@@ -44,7 +44,8 @@ kubectl apply -f deploy/rbac.yaml -f deploy/deployment.yaml
 ```
 
 Alternatively, for advanced use-cases you may run the provisioner out of cluster
-directly on the FreeNAS server.  This is not currently recommended.
+including directly on the FreeNAS server if desired.  Running out of cluster is
+not currently recommended.
 ```
 ./bin/freenas-provisioner-freebsd --kubeconfig=/path/to/kubeconfig.yaml
 ```
@@ -52,10 +53,10 @@ directly on the FreeNAS server.  This is not currently recommended.
 ## Create `StorageClass` and `Secret`
 All the necessary resources are available in the `deploy` folder.  At a minimum
 `secret.yaml` must be modified (remember to `base64` the values) to reflect the
-server details.  You may also want to review `class.yaml` to review available
+server details.  You may also want to read `class.yaml` to review available
 `parameters` of the storage class.  For instance to set the `datasetParentName`.
 ```
-kubectl apply -f deploy/class.yaml -f deploy/secret.yaml
+kubectl apply -f deploy/secret.yaml -f deploy/class.yaml
 ```
 
 ## Example usage
@@ -100,11 +101,6 @@ spec:
     - name: freenas-test-volume
       persistentVolumeClaim:
         claimName: freenas-test-pvc
-```
-
-Create everything:
-```
-kubectl apply -f deploy/
 ```
 
 The underlying dataset / NFS share should quickly be appearing up on FreeNAS

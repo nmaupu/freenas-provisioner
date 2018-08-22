@@ -1,10 +1,10 @@
 package freenas
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/golang/glog"
-	"io/ioutil"
 	"path/filepath"
 )
 
@@ -18,6 +18,8 @@ type Dataset struct {
 	Name           string `json:"name"`
 	Pool           string `json:"pool"`
 	Recordsize     int64  `json:"recordsize,omitempty"`
+	Quota          int64  `json:"quota,omitempty"`
+	Reservation    int64  `json:"reservation,omitempty"`
 	Refquota       int64  `json:"refquota,omitempty"`
 	Refreservation int64  `json:"refreservation,omitempty"`
 	Refer          int64  `json:"refer,omitempty"`
@@ -37,6 +39,8 @@ func (d *Dataset) CopyFrom(source FreenasResource) error {
 		d.Name = src.Name
 		d.Pool = src.Pool
 		d.Recordsize = src.Recordsize
+		d.Quota = src.Quota
+		d.Reservation = src.Reservation
 		d.Refquota = src.Refquota
 		d.Refreservation = src.Refreservation
 		d.Refer = src.Refer
@@ -50,7 +54,8 @@ func (d *Dataset) CopyFrom(source FreenasResource) error {
 func (d *Dataset) Get(server *FreenasServer) error {
 	endpoint := fmt.Sprintf("/api/v1.0/storage/dataset/%s/", d.Name)
 	var dataset Dataset
-	resp, err := server.getSlingConnection().Get(endpoint).ReceiveSuccess(&dataset)
+	var e interface{}
+	resp, err := server.getSlingConnection().Get(endpoint).Receive(&dataset, &e)
 	if err != nil {
 		glog.Warningln(err)
 		return err
@@ -58,8 +63,8 @@ func (d *Dataset) Get(server *FreenasServer) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error getting dataset \"%s\" - message: %v, status: %d", d.Name, body, resp.StatusCode))
+		body, _ := json.Marshal(e)
+		return errors.New(fmt.Sprintf("Error getting dataset \"%s\" - message: %v, status: %d", d.Name, string(body), resp.StatusCode))
 	}
 
 	d.CopyFrom(&dataset)
@@ -70,11 +75,13 @@ func (d *Dataset) Get(server *FreenasServer) error {
 func (d *Dataset) Create(server *FreenasServer) error {
 	parent, dsName := filepath.Split(d.Name)
 	endpoint := fmt.Sprintf("/api/v1.0/storage/dataset/%s", parent)
+	var dataset Dataset
+	var e interface{}
 
 	// rewrite Name attribute to support crazy api semantics
 	d.Name = dsName
 
-	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(d).Receive(nil, nil)
+	resp, err := server.getSlingConnection().Post(endpoint).BodyJSON(d).Receive(&dataset, &e)
 
 	// rewrite Name attribute to support crazy api semantics
 	d.Name = filepath.Join(parent, dsName)
@@ -86,16 +93,19 @@ func (d *Dataset) Create(server *FreenasServer) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 201 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error creating dataset \"%s\" - message: %v, status: %d", d.Name, body, resp.StatusCode))
+		body, _ := json.Marshal(e)
+		return errors.New(fmt.Sprintf("Error creating dataset \"%s\" - message: %v, status: %d", d.Name, string(body), resp.StatusCode))
 	}
+
+	d.CopyFrom(&dataset)
 
 	return nil
 }
 
 func (d *Dataset) Delete(server *FreenasServer) error {
 	endpoint := fmt.Sprintf("/api/v1.0/storage/dataset/%s/", d.Name)
-	resp, err := server.getSlingConnection().Delete(endpoint).Receive(nil, nil)
+	var e interface{}
+	resp, err := server.getSlingConnection().Delete(endpoint).Receive(nil, &e)
 	if err != nil {
 		glog.Warningln(err)
 		return err
@@ -103,8 +113,8 @@ func (d *Dataset) Delete(server *FreenasServer) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 204 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error deleting dataset \"%s\" - %v", d.Name, body))
+		body, _ := json.Marshal(e)
+		return errors.New(fmt.Sprintf("Error deleting dataset \"%s\" - %v", d.Name, string(body)))
 	}
 
 	return nil

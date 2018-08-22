@@ -1,10 +1,10 @@
 package freenas
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/golang/glog"
-	"io/ioutil"
 )
 
 type Permission struct {
@@ -17,7 +17,8 @@ type Permission struct {
 
 func (p *Permission) Put(server *FreenasServer) error {
 	endpoint := "/api/v1.0/storage/permission/"
-	resp, err := server.getSlingConnection().Put(endpoint).BodyJSON(p).Receive(nil, nil)
+	var e interface{}
+	resp, err := server.getSlingConnection().Put(endpoint).BodyJSON(p).Receive(nil, &e)
 	if err != nil {
 		glog.Warningln(err)
 		return err
@@ -25,8 +26,8 @@ func (p *Permission) Put(server *FreenasServer) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 201 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error updating permission - message: %v, status: %d", body, resp.StatusCode))
+		body, _ := json.Marshal(e)
+		return errors.New(fmt.Sprintf("Error updating permission - message: %v, status: %d", string(body), resp.StatusCode))
 	}
 
 	return nil
