@@ -16,7 +16,7 @@ spec:
       serviceAccountName: freenas-nfs-provisioner
       containers:
         - name: freenas-nfs-provisioner
-          image: docker.io/nmaupu/freenas-provisioner:2.0
+          image: docker.io/nmaupu/freenas-provisioner:2.1
           env:
             #- name: IDENTIFIER
             #  value:
