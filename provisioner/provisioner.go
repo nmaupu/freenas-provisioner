@@ -311,7 +311,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 		MapallGroup:  config.ShareMapallGroup,
 		MaprootUser:  config.ShareMaprootUser,
 		MaprootGroup: config.ShareMaprootGroup,
-		Comment:      fmt.Sprintf("freenas-provisioner (%s): %s", p.Identifier, dsPath),
+		Comment:      fmt.Sprintf("freenas-provisioner (%s): %s", p.Identifier, dsPath)[0:120],
 	}
 
 	glog.Infof("Creating dataset: \"%s\", NFS share: \"%s\"", ds.Name, path)
