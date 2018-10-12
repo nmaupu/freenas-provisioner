@@ -311,7 +311,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 		MapallGroup:  config.ShareMapallGroup,
 		MaprootUser:  config.ShareMaprootUser,
 		MaprootGroup: config.ShareMaprootGroup,
-		Comment:      fmt.Sprintf("freenas-provisioner (%s): %s", p.Identifier, dsPath)[0:120],
+		Comment:      TruncateString(fmt.Sprintf("freenas-provisioner (%s): %s", p.Identifier, dsPath), 120),
 	}
 
 	glog.Infof("Creating dataset: \"%s\", NFS share: \"%s\"", ds.Name, path)
@@ -548,4 +548,12 @@ func (p *freenasProvisioner) GetSecret(namespace, secretName string) (*v1.Secret
 
 func BytesToString(data []byte) string {
 	return string(data[:])
+}
+
+func TruncateString(str string, num int) string {
+	bnoden := str
+	if len(str) > num {
+		bnoden = str[:num]
+	}
+	return bnoden
 }
