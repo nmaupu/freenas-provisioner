@@ -131,6 +131,21 @@ To format code before committing:
 make fmt
 ```
 
+# Release
+
+- Update the Makefile with the future new version to be released and pushed (docker image):
+- Commit, push
+- Create a tag:
+```
+git tag v<version>
+git push --tags
+```
+- Once release is done by Travis, push the new docker image:
+```
+make push
+```
+
+
 ## Docs
  * https://github.com/kubernetes/community/tree/master/contributors/design-proposals/storage
  * https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/volume-provisioning.md
