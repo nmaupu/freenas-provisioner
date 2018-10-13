@@ -133,7 +133,8 @@ make fmt
 
 # Release
 
-- Update the Makefile with the future new version to be released and pushed (docker image):
+- Update the Makefile with the future new version to be released and pushed (docker image)
+- Update `deploy/deployment.yaml` with the new image version as well
 - Commit, push
 - Create a tag:
 ```
