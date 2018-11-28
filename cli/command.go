@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/golang/glog"
 	"github.com/jawher/mow.cli"
-	"github.com/kubernetes-incubator/external-storage/lib/controller"
+	"github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/controller"
 	freenasProvisioner "github.com/nmaupu/freenas-provisioner/provisioner"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -13,16 +13,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"syscall"
-	"time"
 )
 
 const (
 	exponentialBackOffOnError = false
-	failedRetryThreshold      = 5
-	leasePeriod               = controller.DefaultLeaseDuration
-	retryPeriod               = controller.DefaultRetryPeriod
-	renewDeadline             = controller.DefaultRenewDeadline
-	termLimit                 = controller.DefaultTermLimit
 )
 
 var (
@@ -36,6 +30,7 @@ var (
 func Process(appName, appDesc, appVersion string) {
 	syscall.Umask(0)
 	flag.Set("logtostderr", "true")
+	flag.CommandLine.Parse([]string{})
 
 	app := cli.App(appName, appDesc)
 	app.Version("v version", fmt.Sprintf("%s version %s", appName, appVersion))
@@ -114,16 +109,10 @@ func execute() {
 	// Start the provision controller which will dynamically provision datasets and nfs shares
 	pc := controller.NewProvisionController(
 		clientset,
-		15*time.Second,
 		*provisionerName,
 		clientFreenasProvisioner,
 		serverVersion.GitVersion,
-		exponentialBackOffOnError,
-		failedRetryThreshold,
-		leasePeriod,
-		renewDeadline,
-		retryPeriod,
-		termLimit,
+		controller.ExponentialBackOffOnError(exponentialBackOffOnError),
 	)
 	pc.Run(wait.NeverStop)
 }

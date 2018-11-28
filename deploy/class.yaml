@@ -7,49 +7,50 @@ metadata:
 #    storageclass.kubernetes.io/is-default-class: "true"
 provisioner: freenas.org/nfs
 allowVolumeExpansion: true
+reclaimPolicy: Delete
 parameters:
   # namespace of the secret which contains FreeNAS server connection details
   # default: kube-system
   #serverSecretNamespace:
-   
+
   # name of the secret which contains FreeNAS server connection details
   # default: freenas-nfs
   #serverSecretName:
-  
+
   # the name of the parent dataset (or simply pool) where all resources will
   # be created, it *must* exist before provisioner will work
   # example: tank/k8s/mycluster
   # default: tank
   #datasetParentName:
-  
+
   # whether to enforce quotas for each dataset
   # if enabled each newly provisioned dataset will set the appropriate quota
   # per the PVC
   # default: true
   #datasetEnableQuotas:
-  
+
   # whether to reserve space when the dataset is create
   # if enabled each newly provisioned dataset will set the appropriate value
   # per the PVC
   # default: true
   #datasetEnableReservation:
-  
+
   # if enabled provisioner will create parent datasets for each namespace
   # otherwise, all datasets will be provisioned in a flat manner
   # default: true
   #datasetEnableNamespaces:
-  
+
   # if datasetEnableNamespaces is enabled, sets a per-namespace quota
   # example: 5M | 10G | 1T  (M, Mi, MB, MiB, G, Gi, GB, GiB, T, Ti, TB, or TiB)
   # default: 0 (no quota)
   #datasetNamespaceQuota:
-  
+
   # if datasetEnableNamespaces is enabled, sets a per-namespace reservation
   # this should not be greater than the datasetNamespaceQuota
   # example: 5M | 10G | 1T  (M, Mi, MB, MiB, G, Gi, GB, GiB, T, Ti, TB, or TiB)
   # default: 0
   #datasetNamespaceReservation:
-  
+
   # if enabled created datasets will adhere to reliable pattern
   # if datasetNamespaces == true dataset pattern is: <datasetParentName>/<namespace>/<PVC Name>
   # if datasetNamespaces == false dataset pattern is: <datasetParentName>/<namespace>-<PVC Name>
@@ -70,18 +71,18 @@ parameters:
   #datasetPermissionsMode
   #datasetPermissionsUser
   #datasetPermissionsGroup
- 
+
   # this determins what the 'server' property of the NFS share will be in
   # in kubernetes, it's purpose is to provide flexibility between the control
   # and data planes of FreeNAS
   # default: uses the 'host' value from the secret
   #shareHost:
- 
+
   # determines if newly created NFS shares will have the 'All Directories'
   # option checked
   # default: true
   #shareAlldirs:
- 
+
   # Authorized hosts/networks (space-separated) allowed to access the shares
   # default: ""
   #shareAllowedHosts:
@@ -92,7 +93,7 @@ parameters:
   # default: root:wheel
   #shareMaprootUser:
   #shareMaprootGroup:
-  
+
   # Determines user mapping for all access (not recommended)
   # cannot be used simultaneously with shareMaproot{User,Group}
   # default: ""
