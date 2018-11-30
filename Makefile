@@ -19,7 +19,7 @@ $(BIN):
 
 .PHONY: image
 image: tmp check-docker-hub
-	cp bin/freenas-provisioner tmp/ && \
+	wget -O tmp/freenas-provisioner https://github.com/nmaupu/freenas-provisioner/releases/download/v$(IMAGE_VERSION)/freenas-provisioner_linux-amd64 && \
 		chmod +x tmp/freenas-provisioner
 	docker build -t $(IMAGE_NAME):$(IMAGE_VERSION) -f Dockerfile.alpine .
 
