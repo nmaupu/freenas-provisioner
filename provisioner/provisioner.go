@@ -144,7 +144,7 @@ func (p *freenasProvisioner) GetConfig(storageClassName string) (*freenasProvisi
 			shareMaprootUser = v
 		case "shareMaprootGroup":
 			shareMaprootGroup = v
-		case "shareMappallUser":
+		case "shareMapallUser":
 			shareMapallUser = v
 		case "shareMapallGroup":
 			shareMapallGroup = v
