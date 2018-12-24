@@ -8,6 +8,7 @@ metadata:
 provisioner: freenas.org/nfs
 allowVolumeExpansion: true
 reclaimPolicy: Delete
+mountOptions: {}
 parameters:
   # namespace of the secret which contains FreeNAS server connection details
   # default: kube-system
@@ -68,11 +69,11 @@ parameters:
   # the following parameters determine permissions and ownership of the
   # dataset mount directory (on FreeNAS) immediately upon creation
   # default: 0777, root, wheel
-  #datasetPermissionsMode
-  #datasetPermissionsUser
-  #datasetPermissionsGroup
+  #datasetPermissionsMode:
+  #datasetPermissionsUser:
+  #datasetPermissionsGroup:
 
-  # this determins what the 'server' property of the NFS share will be in
+  # this determines what the 'server' property of the NFS share will be in
   # in kubernetes, it's purpose is to provide flexibility between the control
   # and data planes of FreeNAS
   # default: uses the 'host' value from the secret
@@ -97,11 +98,11 @@ parameters:
   # Determines user mapping for all access (not recommended)
   # cannot be used simultaneously with shareMaproot{User,Group}
   # default: ""
-  #shareMapalltUser:
+  #shareMapallUser:
   #shareMapallGroup:
 
   # if enabled and datasetDeterministicNames is enabled then shares that
-  # already exist (pre-povisioned out of band) will be ratained by the
+  # already exist (pre-provisioned out of band) will be retained by the
   # provisioner during deletion of the reclaim process
   # ignored if datasetDeterministicNames is disabled (collisions result in failure)
   # default: true

@@ -158,7 +158,7 @@ make push
 ## TODO
  * volume resizing - https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/grow-volume-size.md
  * volume snapshots - https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/volume-snapshotting.md
- * mount options - https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/mount-options.md
+ * ~~mount options - https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/mount-options.md~~
  * ~~support multiple instances (secrets in storage class)~~
  * cleanup empty namespaces?
  * ~~do not delete when deterministic volumes pre-existed (ie: only delete if the provisioner created volume)~~
