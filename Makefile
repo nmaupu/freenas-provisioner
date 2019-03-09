@@ -38,6 +38,10 @@ vendor:
 $(BIN)/freenas-provisioner build: vendor $(BIN) $(shell find . -name "*.go")
 	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner .
 
+.PHONY: linuxarm
+$(BIN)/freenas-provisioner-arm linuxarm: vendor $(BIN) $(shell find . -name "*.go")
+	env CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner-arm .
+
 .PHONY: darwin
 $(BIN)/freenas-provisioner-darwin darwin: vendor $(BIN) $(shell find . -name "*.go")
 	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner-darwin .
