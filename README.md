@@ -3,7 +3,7 @@
 
 # freenas-provisioner
 
-## What is freenas-provisioner
+# What is freenas-provisioner
 FreeNAS-provisioner is a Kubernetes external provisioner.
 When a `PersistentVolumeClaim` appears on a Kube cluster, the provisioner will
 make the corresponding calls to the configured FreeNAS API to create a dataset
@@ -13,7 +13,7 @@ deleted, the provisioner deletes the previously created dataset and share.
 See this for more info on external provisioner:
 https://github.com/kubernetes-incubator/external-storage
 
-## Usage
+# Usage
 The scope of the provisioner allows for a single instance to service multiple
 classes (and/or FreeNAS servers).  The provisioner itself can be deployed into
 the cluster or ran out of cluster, for example, directly on a FreeNAS server.
@@ -31,7 +31,7 @@ and hence same `Secret`, it is recommended to create a new `Secret` for each
 It is **highly** recommended to read `deploy/claim.yaml` to review available
 `parameters` and gain a better understanding of functionality and behavior.
 
-### FreeNAS Setup
+## FreeNAS Setup
 You must manually create a dataset.  You may simply use a pool as the parent
 dataset but it's recommended to create a dedicated dataset.
 
@@ -39,7 +39,7 @@ Additionally, you need to enabled the NFS service.  It's highly recommended to
 configure the NFS service as v3.  If v4 must be used then it's also recommended
 to enable the `NFSv3 ownership model for NFSv4` option.
 
-### Provision the provisioner
+## Provision the provisioner
 Run it on the cluster:
 
 ```
@@ -54,7 +54,7 @@ not currently recommended.
 ./bin/freenas-provisioner-freebsd --kubeconfig=/path/to/kubeconfig.yaml
 ```
 
-### Create `StorageClass` and `Secret`
+## Create `StorageClass` and `Secret`
 All the necessary resources are available in the `deploy` folder.  At a minimum
 `secret.yaml` must be modified (remember to `base64` the values) to reflect the
 server details.  You may also want to read `class.yaml` to review available
@@ -64,7 +64,7 @@ server details.  You may also want to read `class.yaml` to review available
 kubectl apply -f deploy/secret.yaml -f deploy/class.yaml
 ```
 
-### Example usage
+## Example usage
 Next, create a `PersistentVolumeClaim` using the storage class
 (`deploy/test-claim.yaml`):
 
@@ -117,7 +117,7 @@ side.  In case of issue, follow the provisioner's logs using:
 kubectl -n kube-system logs -f freenas-nfs-provisioner-<id>
 ```
 
-## Development
+# Development
 
 ```
 make vendor && make
@@ -144,7 +144,7 @@ To format code before committing:
 make fmt
 ```
 
-## Release
+# Release
 
 - Update the Makefile with the future new version to be released and pushed (docker image)
 - Update `deploy/deployment.yaml` with the new image version as well
@@ -162,7 +162,7 @@ git push --tags
 make push
 ```
 
-## Docs
+# Docs
  * https://github.com/kubernetes/community/tree/master/contributors/design-proposals/storage
  * https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/volume-provisioning.md
  * https://kubernetes.io/docs/concepts/storage/storage-classes/
@@ -170,7 +170,7 @@ make push
  * https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/container-storage-interface.md
  * https://github.com/kubernetes-csi/drivers/tree/master/pkg
 
-## TODO
+# TODO
  * volume resizing - https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/grow-volume-size.md
  * volume snapshots - https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/volume-snapshotting.md
  * ~~mount options - https://github.com/kubernetes/community/blob/master/contributors/design-proposals/storage/mount-options.md~~
@@ -180,7 +180,7 @@ make push
   * https://github.com/kubernetes-incubator/external-storage/blob/master/ceph/cephfs/cephfs-provisioner.go#L225
  * iscsi
 
-## Notes
+# Notes
 To sniff API traffic between host and server:
 
 ```
