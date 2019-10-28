@@ -8,7 +8,7 @@ metadata:
 provisioner: freenas.org/nfs
 allowVolumeExpansion: true
 reclaimPolicy: Delete
-mountOptions: {}
+mountOptions: []
 parameters:
   # namespace of the secret which contains FreeNAS server connection details
   # default: kube-system
@@ -60,7 +60,7 @@ parameters:
   #datasetDeterministicNames:
 
   # if enabled and datasetDeterministicNames is enabled then dataset that
-  # already exist (pre-povisioned out of band) will be ratained by the
+  # already exist (pre-provisioned out of band) will be retained by the
   # provisioner during deletion of the reclaim process
   # ignored if datasetDeterministicNames is disabled (collisions result in failure)
   # default: true
@@ -80,7 +80,8 @@ parameters:
   #shareHost:
 
   # determines if newly created NFS shares will have the 'All Directories'
-  # option checked
+  # option checked - note that some k8s versions (e.g OKD 3.11 which has v1.11.0
+  # under the hood) may demand Strings as in "true" or "false"
   # default: true
   #shareAlldirs:
 
