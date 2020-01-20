@@ -45,5 +45,5 @@ func (s *FreenasServer) getSlingConnection() *sling.Sling {
 	}
 
 	httpClient := &http.Client{Transport: tr}
-	return sling.New().Client(httpClient).Base(s.url).SetBasicAuth(s.Username, s.Password)
+	return sling.New().Client(httpClient).Base(s.url).SetBasicAuth(s.Username, s.Password).Set("Accept", "application/json").Set("Content-Type", "application/json")
 }
