@@ -42,11 +42,11 @@ to enable the `NFSv3 ownership model for NFSv4` option.
 
 ## Install via Helm
 
-Using [Helm](https://helm.sh), you can easily install the FreeNAS Provisioner in 
-Kubernetes cluaster by running the following:
+Using [Helm](https://helm.sh), you can easily install the FreeNAS Provisioner in a 
+Kubernetes cluster by running the following:
 
 ```
-helm upgrade --install --generate-name \
+helm install --generate-name \
   --set 'freenasConfig.host=<ip_or_hostname>' \
   --set 'storageClass.parameters.datasetParentName=<pool/dataset_name>' \
   --set 'freenasConfig.password=<root_password>
