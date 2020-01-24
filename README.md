@@ -47,6 +47,7 @@ Kubernetes cluster by running the following:
 
 ```
 helm install --generate-name \
+  helm/freenas-provisioner \
   --set 'freenasConfig.host=<ip_or_hostname>' \
   --set 'storageClass.parameters.datasetParentName=<pool/dataset_name>' \
   --set 'freenasConfig.password=<root_password>
