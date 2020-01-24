@@ -1,0 +1,166 @@
+# Default values for freenas-provisioner.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# replicaCount -- Number of pods to run
+replicaCount: 1
+
+image:
+
+  # image.repository -- Docker registry/repository to pull the image from
+  repository: docker.io/nmaupu/freenas-provisioner
+  
+  # image.pullPolicy -- Docker image pull policy
+  pullPolicy: IfNotPresent
+
+  # image.pullSecrets -- Secrets to use when pulling Docker images
+  pullSecrets: []
+
+# nameOverride -- Overrides the name of resources
+nameOverride: ""
+
+# fullnameOverride -- Overrides the Full Name of resources
+fullnameOverride: ""
+
+freenasConfig:
+  
+  # note that all values are relative to where the provisioner is running
+  # ie: if running the provisioner directly on the FreeNAS server 'localhost'
+  # would be a valid 'host' value
+
+  # freenasConfig.useExistingSecret -- Set this to true to use your own Secret, created outside of this deployment
+  useExistingSecret: false
+
+  # freenasConfig.secretName -- name of the secret which contains FreeNAS server connection details
+  secretName: freenas-nfs
+
+  # freenasConfig.protocol -- Protocol to use to access the FreeNAS API. Valid values are http or https
+  protocol: http
+
+  # freenasConfig.host -- Host at which FreeNAS can be reached at. Set to localhost for running the provisioner out of cluster directly on FreeNAS node
+  host: localhost
+
+  # freenasConfig.port -- Port FreeNAS is running on. Usually 80 for http and 443 for https
+  port: 80
+
+  # freenasConfig.username -- Do not change. API is only available for root currently
+  username: root
+
+  # freenasConfig.password -- (string) Password for root user. NEVER set this in a file. Use --set freenasConfig.password=<your_password> instead
+  # password:
+
+  # freenasConfig.allowInsecure -- Allow for self-signed/untrusted certs if using https
+  allowInsecure: false
+
+serviceAccount:
+
+  # serviceAccount.create -- Specifies whether a service account should be created
+  create: true
+
+  # serviceAccount.name -- (string) name of the service account to use. If not set and create is true, a name is generated using the fullname template
+  # name:
+
+storageClass:
+
+  # storageClass.annotations -- (Optional) annotations to add to the StorageClass. ie. storageclass.kubernetes.io/is-default-class: "true"
+  annotations: {}
+    # storageclass.kubernetes.io/is-default-class: "true"
+  
+  # storageClass.reclaimPolicy -- Reclaim Policy to use for created PVCs
+  reclaimPolicy: Delete
+
+  # storageClass.serverSecretNamespace -- Overrides the namespace of the secret which contains the FreeNAS server connection details. Default is this Release's Namespace
+  # serverSecretNamespace:
+
+  parameters:
+
+    # storageClass.parameters.datasetParentName -- the name of the parent dataset (or simply pool) where all resources will be created, it *must* exist before provisioner will work. ie tank/k8s/mycluster
+    datasetParentName: tank
+
+    # storageClass.parameters.datasetEnableQuotas -- whether to enforce quotas for each dataset. If enabled each newly provisioned dataset will set the appropriate quota per the PVC
+    datasetEnableQuotas: "true"
+
+    # storageClass.parameters.datasetEnableReservation -- whether to reserve space when the dataset is created. If enabled each newly provisioned dataset will set the appropriate value per the PVC
+    datasetEnableReservation: "true"
+
+    # storageClass.parameters.datasetEnableNamespaces -- if enabled provisioner will create parent datasets for each namespace otherwise, all datasets will be provisioned in a flat manner
+    datasetEnableNamespaces: "true"
+
+    # storageClass.parameters.datasetNamespaceQuota -- (string) Sets a per-namespace quota. example: 5M | 10G | 1T  (M, Mi, MB, MiB, G, Gi, GB, GiB, T, Ti, TB, or TiB). datasetEnableNamespaces must also be set to `true`
+    # datasetNamespaceQuota: "0"
+
+    # storageClass.parameters.datasetNamespaceReservation -- (string) Sets a per-namespace reservation. Should not be greater than the `datasetNamespaceQuota`. datasetEnableNamespaces must also be set to `true`. example: 5M | 10G | 1T  (M, Mi, MB, MiB, G, Gi, GB, GiB, T, Ti, TB, or TiB).
+    # datasetNamespaceReservation: "0"
+ 
+    # storageClass.parameters.datasetDeterministicNames -- if enabled created datasets will adhere to reliable pattern. if datasetNamespaces == true dataset pattern is: <datasetParentName>/<namespace>/<PVC Name>. if datasetNamespaces == false dataset pattern is: <datasetParentName>/<namespace>-<PVC Name>. if disabled, datasets will be created with a name pvc-<uid> (the name of the provisioned PV).
+    datasetDeterministicNames: "true"
+
+    # storageClass.parameters.datasetRetainPreExisting -- if enabled and datasetDeterministicNames is enabled then dataset that already exist (pre-provisioned out of band) will be retained by the provisioner during deletion of the reclaim process ignored if datasetDeterministicNames is disabled (collisions result in failure)
+    datasetRetainPreExisting: "true"
+    
+    # storageClass.parameters.datasetPermissionsMode -- Sets chmod of the dataset mount directory (on FreeNAS) immediately upon creation
+    datasetPermissionsMode: "0777"
+    
+    # storageClass.parameters.datasetPermissionsUser -- Sets user of the dataset mount directory (on FreeNAS) immediately upon creation
+    datasetPermissionsUser: root
+    
+    # storageClass.parameters.datasetPermissionsGroup -- Sets group of the dataset mount directory (on FreeNAS) immediately upon creation
+    datasetPermissionsGroup: wheel
+
+    # storageClass.parameters.shareHost -- (string) Determines what the 'server' property of the NFS share will be in kubernetes. Its purpose is to provide flexibility between the control and data planes of FreeNAS. If not set, uses the 'host' value from the secret.
+    #shareHost:
+
+    # storageClass.parameters.shareAlldirs -- Determines if newly created NFS shares will have the 'All Directories' option checked - note that some k8s versions (e.g OKD 3.11 which has v1.11.0 under the hood) may demand Strings as in "true" or "false".
+    shareAlldirs: "true"
+
+    # storageClass.parameters.shareAllowedHosts -- Authorized hosts (space-separated) allowed to access the shares. All by default.
+    shareAllowedHosts: ""
+    
+    # storageClass.parameters.shareAllowedNetworks -- Authorized hosts/networks (space-separated) allowed to access the shares. All by default.
+    shareAllowedNetworks: ""
+
+    # storageClass.parameters.shareMaprootUser -- Determines root user mapping. NOTE: cannot be used simultaneously with shareMapAll{User,Group}
+    shareMaprootUser: root
+    
+    # storageClass.parameters.shareMaprootGroup -- Determines root group mapping. NOTE: cannot be used simultaneously with shareMapAll{User,Group}
+    shareMaprootGroup: wheel
+
+    # storageClass.parameters.shareMapallUser -- (string) Determines user mapping for all access (not recommended). NOTE: cannot be used simultaneously with shareMaproot{User,Group}
+    # shareMapallUser: ""
+
+    # storageClass.parameters.shareMapallGroup -- (string) Determines group mapping for all access (not recommended. NOTE: cannot be used simultaneously with shareMaproot{User,Group}
+    # shareMapallGroup: ""
+
+    # storageClass.parameters.shareRetainPreExisting -- if enabled and datasetDeterministicNames is enabled then shares that already exist (pre-provisioned out of band) will be retained by the provisioner during deletion of the reclaim process ignored if datasetDeterministicNames is disabled (collisions result in failure)
+    shareRetainPreExisting: "true"
+
+# resources -- Set resource limits/requests for the Pod(s)
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# nodeSelector -- Node Selector configuration
+nodeSelector: {}
+
+# tolerations -- Node toleration configuration
+tolerations: []
+
+# affinity -- Set Pod affinity rules
+affinity: {}
+
+# podSecurityContext -- Set Pod security contexts
+podSecurityContext: {}
+  # fsGroup: 2000
+
+# securityContext -- Set Security Context
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000

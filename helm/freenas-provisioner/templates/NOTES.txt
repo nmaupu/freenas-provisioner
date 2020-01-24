@@ -1,0 +1,41 @@
+FreeNAS-Provisioner was deployed!
+
+To test your deployment, follow the below:
+
+1. Create your first PVC:
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: freenas-test-pvc
+spec:
+  storageClassName: freenas-nfs
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
+
+2. Create a Pod and mount the PVC
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: freenas-test-pod
+spec:
+  containers:
+  - name: freenas-test-pod
+    image: gcr.io/google_containers/busybox:1.24
+    command:
+      - "/bin/sh"
+    args:
+      - "-c"
+      - "date >> /mnt/file.log && exit 0 || exit 1"
+    volumeMounts:
+      - name: freenas-test-volume
+        mountPath: "/mnt"
+  restartPolicy: "Never"
+  volumes:
+    - name: freenas-test-volume
+      persistentVolumeClaim:
+        claimName: freenas-test-pvc

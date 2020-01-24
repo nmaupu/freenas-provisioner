@@ -1,0 +1,22 @@
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: freenas-nfs
+  labels:
+{{ include "freenas-provisioner.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.storageClass.annotations | nindent 4 }}
+provisioner: freenas.org/nfs
+allowVolumeExpansion: true
+reclaimPolicy: {{ .Values.storageClass.reclaimPolicy }}
+mountOptions: []
+parameters:
+
+  # namespace of the secret which contains FreeNAS server connection details
+  serverSecretNamespace: {{ .Values.storageClass.serverSecretNamespace | default .Release.Namespace }}
+
+  # name of the secret which contains FreeNAS server connection details
+  serverSecretName: {{ .Values.freenasConfig.secretName }}
+  
+  {{- toYaml .Values.storageClass.parameters | nindent 2 }}
