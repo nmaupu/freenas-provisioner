@@ -61,3 +61,14 @@ Create the name of the service account to use
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Gets the image Tag to use when pulling the docker image
+*/}}
+{{- define "freenas-provisioner.imageTag" -}}
+{{- if .Values.image.tag -}}
+{{ .Values.image.tag }}
+{{- else -}}
+{{ .Chart.AppVersion }}
+{{- end -}}
+{{- end -}}
