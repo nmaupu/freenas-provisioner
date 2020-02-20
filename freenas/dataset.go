@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/golang/glog"
 	"path/filepath"
+	"strconv"
 )
 
 var (
@@ -25,6 +26,50 @@ type Dataset struct {
 	Refer          int64  `json:"refer,omitempty"`
 	Used           int64  `json:"used,omitempty"`
 	Comments       string `json:"comments,omitempty"`
+}
+
+func (d *Dataset) MarshalJSON() ([]byte, error) {
+	data := &struct {
+		Avail          int64  `json:"avail,omitempty"`
+		Mountpoint     string `json:"mountpoint,omitempty"`
+		Name           string `json:"name"`
+		Pool           string `json:"pool"`
+		Recordsize     int64  `json:"recordsize,omitempty"`
+		Quota          string `json:"quota,omitempty"`
+		Reservation    string `json:"reservation,omitempty"`
+		Refquota       string `json:"refquota,omitempty"`
+		Refreservation string `json:"refreservation,omitempty"`
+		Refer          int64  `json:"refer,omitempty"`
+		Used           int64  `json:"used,omitempty"`
+		Comments       string `json:"comments,omitempty"`
+	}{
+		Avail:      d.Avail,
+		Mountpoint: d.Mountpoint,
+		Name:       d.Name,
+		Pool:       d.Pool,
+		Recordsize: d.Recordsize,
+		Refer:      d.Refer,
+		Used:       d.Used,
+		Comments:   d.Comments,
+	}
+
+	if d.Quota > 0 {
+		data.Quota = strconv.FormatInt(d.Quota, 10) + "b"
+	}
+
+	if d.Reservation > 0 {
+		data.Reservation = strconv.FormatInt(d.Reservation, 10) + "b"
+	}
+
+	if d.Refquota > 0 {
+		data.Refquota = strconv.FormatInt(d.Refquota, 10) + "b"
+	}
+
+	if d.Refreservation > 0 {
+		data.Refreservation = strconv.FormatInt(d.Refreservation, 10) + "b"
+	}
+
+	return json.Marshal(data)
 }
 
 func (d *Dataset) String() string {
