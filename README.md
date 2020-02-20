@@ -70,6 +70,7 @@ helm install --generate-name \
 | image.pullPolicy | string | `"IfNotPresent"` | Docker image pull policy |
 | image.pullSecrets | list | `[]` | Secrets to use when pulling Docker images |
 | image.repository | string | `"docker.io/nmaupu/freenas-provisioner"` | Docker registry/repository to pull the image from |
+| image.tag | string | `{{ .Chart.AppVersion }}` | Overrides the tag to use |
 | nameOverride | string | `""` | Overrides the name of resources |
 | nodeSelector | object | `{}` | Node Selector configuration |
 | podSecurityContext | object | `{}` | Set Pod security contexts |
