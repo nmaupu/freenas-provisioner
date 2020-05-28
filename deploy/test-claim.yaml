@@ -9,4 +9,6 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 1Mi
+      # Apparently, around feb20, changes have been incorporated into FreeNAS
+      # disallowing quotas smaller than 1Gi, github.com/freenas/webui/pull/3613
+      storage: 1Gi
