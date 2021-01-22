@@ -1,18 +1,20 @@
 package provisioner
 
 import (
-	"code.cloudfoundry.org/bytefmt"
+	"context"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
-	"github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/controller"
-	"github.com/nmaupu/freenas-provisioner/freenas"
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"code.cloudfoundry.org/bytefmt"
+	"github.com/golang/glog"
+	"github.com/nmaupu/freenas-provisioner/freenas"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 )
 
 var (
@@ -56,8 +58,8 @@ type freenasProvisionerConfig struct {
 	ServerAllowInsecure   bool
 }
 
-func (p *freenasProvisioner) GetConfig(storageClassName string) (*freenasProvisionerConfig, error) {
-	class, err := p.Client.StorageV1beta1().StorageClasses().Get(storageClassName, metav1.GetOptions{})
+func (p *freenasProvisioner) GetConfig(ctx context.Context, storageClassName string) (*freenasProvisionerConfig, error) {
+	class, err := p.Client.StorageV1().StorageClasses().Get(ctx, storageClassName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +161,7 @@ func (p *freenasProvisioner) GetConfig(storageClassName string) (*freenasProvisi
 		}
 	}
 
-	secret, err := p.GetSecret(serverSecretNamespace, serverSecretName)
+	secret, err := p.GetSecret(ctx, serverSecretNamespace, serverSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -236,20 +238,20 @@ func New(client kubernetes.Interface, identifier string) controller.Provisioner 
 }
 
 // Provision a dataset and creates an NFS share on Freenas side
-func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
+func (p *freenasProvisioner) Provision(ctx context.Context, options controller.ProvisionOptions) (*v1.PersistentVolume, controller.ProvisioningState, error) {
 	var err error
 
 	// get config
-	config, err := p.GetConfig(*options.PVC.Spec.StorageClassName)
+	config, err := p.GetConfig(ctx, *options.PVC.Spec.StorageClassName)
 	if err != nil {
-		return nil, err
+		return nil, controller.ProvisioningFinished, err
 	}
 	//glog.Infof("%+v\n", config)
 
 	// get server
 	freenasServer, err := p.GetServer(*config)
 	if err != nil {
-		return nil, err
+		return nil, controller.ProvisioningFinished, err
 	}
 
 	// get parent dataset
@@ -258,7 +260,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 	}
 	err = parentDs.Get(freenasServer)
 	if err != nil {
-		return nil, err
+		return nil, controller.ProvisioningFinished, err
 	}
 
 	meta := options.PVC.GetObjectMeta()
@@ -336,7 +338,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 		}
 	}
 	if err != nil {
-		return nil, err
+		return nil, controller.ProvisioningFinished, err
 	}
 
 	if config.DatasetEnableDeterministicNames {
@@ -352,7 +354,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 		err = ds.Create(freenasServer)
 	}
 	if err != nil {
-		return nil, err
+		return nil, controller.ProvisioningFinished, err
 	}
 
 	if config.DatasetEnableDeterministicNames {
@@ -367,7 +369,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 		err = share.Create(freenasServer)
 	}
 	if err != nil {
-		return nil, err
+		return nil, controller.ProvisioningFinished, err
 	}
 
 	glog.Infof("setting permissions on path \"%s\" to - mode: %s, owner: %s:%s", path, config.DatasetPermissionsMode, config.DatasetPermissionsUser, config.DatasetPermissionsGroup)
@@ -380,7 +382,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 	}
 	err = permission.Put(freenasServer)
 	if err != nil {
-		return nil, err
+		return nil, controller.ProvisioningFinished, err
 	}
 
 	pv := &v1.PersistentVolume{
@@ -399,9 +401,9 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
-			PersistentVolumeReclaimPolicy: options.PersistentVolumeReclaimPolicy,
+			PersistentVolumeReclaimPolicy: *options.StorageClass.ReclaimPolicy,
 			AccessModes:                   options.PVC.Spec.AccessModes,
-			MountOptions:                  options.MountOptions,
+			MountOptions:                  options.StorageClass.MountOptions,
 			Capacity: v1.ResourceList{
 				v1.ResourceName(v1.ResourceStorage): options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
 			},
@@ -415,7 +417,7 @@ func (p *freenasProvisioner) Provision(options controller.VolumeOptions) (*v1.Pe
 		},
 	}
 
-	return pv, nil
+	return pv, controller.ProvisioningFinished, nil
 }
 
 // Prep for resizing
@@ -435,7 +437,7 @@ func (p *iscsiProvisioner) SupportsBlock() bool {
 
 */
 
-func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
+func (p *freenasProvisioner) Delete(ctx context.Context, volume *v1.PersistentVolume) error {
 	var datasetPreExisted, sharePreExisted bool = false, false
 	var shareId int
 
@@ -460,7 +462,7 @@ func (p *freenasProvisioner) Delete(volume *v1.PersistentVolume) error {
 	var err error
 
 	// get config
-	config, err := p.GetConfig(volume.Spec.StorageClassName)
+	config, err := p.GetConfig(ctx, volume.Spec.StorageClassName)
 	if err != nil {
 		return err
 	}
@@ -540,11 +542,11 @@ func (p *freenasProvisioner) GetServer(config freenasProvisionerConfig) (*freena
 	), nil
 }
 
-func (p *freenasProvisioner) GetSecret(namespace, secretName string) (*v1.Secret, error) {
+func (p *freenasProvisioner) GetSecret(ctx context.Context, namespace, secretName string) (*v1.Secret, error) {
 	if p.Client == nil {
 		return nil, fmt.Errorf("Cannot get kube client")
 	}
-	return p.Client.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
+	return p.Client.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{})
 }
 
 func BytesToString(data []byte) string {

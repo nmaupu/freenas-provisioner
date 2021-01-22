@@ -31,23 +31,20 @@ tag: image
 push: tag
 	docker push $(REMOTE_NAME):$(IMAGE_VERSION)
 
-vendor:
-	dep ensure
-
 .PHONY: build
-$(BIN)/freenas-provisioner build: vendor $(BIN) $(shell find . -name "*.go")
+$(BIN)/freenas-provisioner build: $(BIN) $(shell find . -name "*.go")
 	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner .
 
 .PHONY: linuxarm
-$(BIN)/freenas-provisioner-arm linuxarm: vendor $(BIN) $(shell find . -name "*.go")
+$(BIN)/freenas-provisioner-arm linuxarm: $(BIN) $(shell find . -name "*.go")
 	env CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner-arm .
 
 .PHONY: darwin
-$(BIN)/freenas-provisioner-darwin darwin: vendor $(BIN) $(shell find . -name "*.go")
+$(BIN)/freenas-provisioner-darwin darwin: $(BIN) $(shell find . -name "*.go")
 	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner-darwin .
 
 .PHONY: freebsd
-$(BIN)/freenas-provisioner-freebsd freebsd: vendor $(BIN) $(shell find . -name "*.go")
+$(BIN)/freenas-provisioner-freebsd freebsd: $(BIN) $(shell find . -name "*.go")
 	env CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o $(BIN)/freenas-provisioner-freebsd .
 
 .PHONY: clean

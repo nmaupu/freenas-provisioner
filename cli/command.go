@@ -1,18 +1,19 @@
 package cli
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"os"
+	"syscall"
+
 	"github.com/golang/glog"
-	"github.com/jawher/mow.cli"
-	"github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/controller"
+	cli "github.com/jawher/mow.cli"
 	freenasProvisioner "github.com/nmaupu/freenas-provisioner/provisioner"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"os"
-	"syscall"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 )
 
 const (
@@ -114,5 +115,5 @@ func execute() {
 		serverVersion.GitVersion,
 		controller.ExponentialBackOffOnError(exponentialBackOffOnError),
 	)
-	pc.Run(wait.NeverStop)
+	pc.Run(context.Background())
 }
