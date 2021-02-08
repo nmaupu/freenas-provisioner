@@ -1,13 +1,7 @@
 language: go
 go:
-- '1.10.x'
+- '1.15.x'
 sudo: false
-
-before_install:
-  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-
-install:
-  make vendor
 
 script:
 - make build
@@ -30,4 +24,4 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
-  go: 1.10.x
+  go: 1.15.x
