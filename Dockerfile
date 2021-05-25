@@ -1,10 +1,10 @@
-FROM alpine
+FROM bitnami/minideb
 
-RUN apk update && \
-    apk add ca-certificates && \
-    rm -rf /var/cache/apk/* && \
-    update-ca-certificates
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y ca-certificates && \
+    update-ca-certificates && \
+    apt-get clean
 
-COPY bin/freenas-provisioner /freenas-provisioner
-
+COPY tmp/freenas-provisioner /
 ENTRYPOINT ["/freenas-provisioner"]
